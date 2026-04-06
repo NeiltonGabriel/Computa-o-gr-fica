@@ -15,29 +15,16 @@ if "%~1"=="" (
 set nome=%~n1
 if "%nome%"=="" set nome=programa
 
-<<<<<<< HEAD
 :loop
 cls
 echo [1/2] Compilando objeto: %nome%.o...
 gcc -c -o "%nome%.o" "%arquivo%" -I"C:\MinGW\include"
 
 if %errorlevel% neq 0 goto erro_comp
-=======
-echo [1/2] Compilando objeto: %nome%.o...
-gcc -c -o "%nome%.o" "%arquivo%" -I"C:\MinGW\include"
-
-if %errorlevel% neq 0 (
-    echo.
-    echo [ERRO] Falha na compilacao do objeto.
-    pause
-    exit /b
-)
->>>>>>> d5a6fbe4268799a047ac51242ea04b21b1940330
 
 echo [2/2] Linkando bibliotecas: %nome%.exe...
 gcc -o "%nome%.exe" "%nome%.o" -L"C:\MinGW\lib" -lfreeglut -lopengl32 -lglu32
 
-<<<<<<< HEAD
 if %errorlevel% neq 0 goto erro_link
 
 echo.
@@ -73,18 +60,3 @@ echo.
 echo [ERRO] Falha ao criar o executavel final.
 pause
 goto pergunta
-=======
-if %errorlevel% equ 0 (
-    echo.
-    echo =======================================
-    echo    Sucesso! Abrindo %nome%.exe...
-    echo =======================================
-    echo.
-    start "" "%nome%.exe"
-) else (
-    echo.
-    echo [ERRO] Falha ao criar o executavel final.
-)
-
-pause
->>>>>>> d5a6fbe4268799a047ac51242ea04b21b1940330
