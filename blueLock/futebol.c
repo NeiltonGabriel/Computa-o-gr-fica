@@ -77,6 +77,12 @@ const float BOLA_ACEL = 0.35f;
 const float BOLA_ATRITO = 0.95f;    
 const float BOLA_MAX_VEL = 20.0f;   
 
+const float TEMPO_CHAPEU_SEC = 3.0f;
+const float DURACAO_CHAPEU_SEC = 0.8f;
+float progressoChapeu = 0.0f;
+bool executandoChapeu = false;
+float tempoAtualChapeu = 0.0f;
+
 bool teclaW = false, teclaA = false, teclaS = false, teclaD = false;
 bool teclaI = false, teclaJ = false, teclaK = false, teclaL = false;
 bool teclaCima = false, teclaBaixo = false, teclaEsq = false, teclaDir = false;
@@ -274,8 +280,52 @@ void campo() {
 }
 
 void desenhaBola() {
+    float escalaChapeu = 1.0f;
+    float offsetSombraX = 0.0f;
+    float offsetSombraY = 0.0f;
+    
+    if (executandoChapeu) {
+        float proporcao = tempoAtualChapeu / DURACAO_CHAPEU_SEC;
+        escalaChapeu = 1.0f + 1.2f * sin(proporcao * PI);
+        offsetSombraX = 3.0f * sin(proporcao * PI);
+        offsetSombraY = -6.0f * sin(proporcao * PI);
+    }
+    
+    if (executandoChapeu) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glColor4f(0.0f, 0.0f, 0.0f, 0.4f);
+        desenhaCirculo(bolaX + offsetSombraX, bolaY + offsetSombraY, BOLA_RAIO, 30, 0, 360, PREENCHIDO);
+        glDisable(GL_BLEND);
+    }
+    
+    glPushMatrix();
+    glTranslatef(bolaX, bolaY, 0.0f);
+    glScalef(escalaChapeu, escalaChapeu, 1.0f);
     glColor3f(1.0f, 1.0f, 1.0f);
-    desenhaCirculo(bolaX, bolaY, BOLA_RAIO, 30, 0, 360, PREENCHIDO);
+    desenhaCirculo(0.0f, 0.0f, BOLA_RAIO, 30, 0, 360, PREENCHIDO);
+    glPopMatrix();
+    
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    float larguraBarra = BOLA_RAIO * 4.0f;
+    float alturaBarra = 4.0f;
+    float deslocamentoY = BOLA_RAIO * 2.5f;
+    
+    glColor4f(0.1f, 0.1f, 0.1f, 0.6f);
+    glRectf(bolaX - larguraBarra/2.0f, bolaY + deslocamentoY, bolaX + larguraBarra/2.0f, bolaY + deslocamentoY + alturaBarra);
+    
+    if (progressoChapeu >= 1.0f) {
+        glColor4f(0.0f, 1.0f, 0.0f, 0.8f);
+    } else {
+        glColor4f(1.0f, 0.8f, 0.0f, 0.8f);
+    }
+    
+    float larguraAtual = larguraBarra * progressoChapeu;
+    glRectf(bolaX - larguraBarra/2.0f, bolaY + deslocamentoY, bolaX - larguraBarra/2.0f + larguraAtual, bolaY + deslocamentoY + alturaBarra);
+    
+    glDisable(GL_BLEND);
 }
 
 void liberarInputs(int value) {
@@ -357,6 +407,19 @@ void atualizaFisica(int value) {
 
     bolaX += bolaVX;
     bolaY += bolaVY;
+
+    if (executandoChapeu) {
+        tempoAtualChapeu += 16.0f / 1000.0f;
+        if (tempoAtualChapeu >= DURACAO_CHAPEU_SEC) {
+            executandoChapeu = false;
+            tempoAtualChapeu = 0.0f;
+        }
+    } else {
+        if (velAtual > 0.5f && bolaEmJogo && !inputsBloqueados) {
+            progressoChapeu += (16.0f / 1000.0f) / TEMPO_CHAPEU_SEC;
+            if (progressoChapeu > 1.0f) progressoChapeu = 1.0f;
+        }
+    }
 
     float px[4] = {-MEIO_C, -MEIO_C, MEIO_C, MEIO_C};
     float py[4] = {GOL_L / 2.0f, -GOL_L / 2.0f, GOL_L / 2.0f, -GOL_L / 2.0f};
@@ -459,6 +522,13 @@ void tecladoAperta(unsigned char key, int x, int y) {
         case 'k': case 'K': teclaK = true; break;
         case 'j': case 'J': teclaJ = true; break;
         case 'l': case 'L': teclaL = true; break;
+        case ' ':
+            if (progressoChapeu >= 1.0f && !executandoChapeu && bolaEmJogo && !inputsBloqueados) {
+                executandoChapeu = true;
+                progressoChapeu = 0.0f;
+                tempoAtualChapeu = 0.0f;
+            }
+            break;
     }
 }
 
