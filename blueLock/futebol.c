@@ -1,185 +1,366 @@
 #include <GL/glut.h>
 #include <math.h>
+#include <stdbool.h>
 
 #define PI 3.14159265
 #define PREENCHIDO 1
 #define BORDA 0
 
-const float L_CAMPO = 200.0f;
-const float A_CAMPO = 129.5f;
-const float M_X = 100.5f;
-const float M_Y = 80.0f;
+const float TELA_LIMITE_X = 1000.0f;
+const float TELA_LIMITE_Y = 600.0f;
+const float COR_FUNDO_R = 0.2f;
+const float COR_FUNDO_G = 0.2f;
+const float COR_FUNDO_B = 0.2f;
 
-void init(){
-    glClearColor(0.0, 0.0, 0.0, 0.0); //define a cor do fundo
+const float OFFSET_CAMPO_X = 0.0f;
+const float OFFSET_CAMPO_Y = -125.0f;
+
+const float PLACAR_LARGURA = 250.0f;
+const float PLACAR_ALTURA = 240.0f;
+const float DIGITO_LARGURA = 85.0f;
+const float DIGITO_ALTURA = 170.0f;
+const float DIGITO_ESPESSURA = 10.0f;
+const float PLACAR_POS_Y = 150.0f;
+
+const int QTD_FAIXAS_GRAMA = 10;
+const float GRAMA_CLARA_R = 0.133f;
+const float GRAMA_CLARA_G = 0.545f;
+const float GRAMA_CLARA_B = 0.133f;
+const float GRAMA_ESCURA_R = 0.100f;
+const float GRAMA_ESCURA_G = 0.450f;
+const float GRAMA_ESCURA_B = 0.100f;
+
+#define ESCALA 13.0f
+#define CAMPO_C (105.0f * ESCALA)
+#define CAMPO_L (68.0f * ESCALA)
+
+const float RAIO_CENTRO = 9.15f * ESCALA;
+const float AREA_G_C = 16.5f * ESCALA;
+const float AREA_G_L = 40.3f * ESCALA;
+const float AREA_P_C = 5.5f * ESCALA;
+const float AREA_P_L = 18.32f * ESCALA;
+const float GOL_L = 7.32f * ESCALA;
+const float GOL_PROF = 2.4f * ESCALA;
+const float MARCA_PENALTI = 11.0f * ESCALA;
+const float RAIO_ESCANTEIO = 2.0f * ESCALA;
+
+const float RAIO_PONTO_CENTRAL = 0.35f * ESCALA;
+const float RAIO_MARCA_PENALTI_ESQ = 0.35f * ESCALA;
+const float RAIO_MARCA_PENALTI_DIR = 0.35f * ESCALA;
+
+const float MEIO_C = CAMPO_C / 2.0f; 
+const float MEIO_L = CAMPO_L / 2.0f; 
+
+int placarEsq = 0;
+int placarDir = 0;
+
+float bolaX = 0.0f;
+float bolaY = 0.0f;
+float bolaVX = 0.0f;
+float bolaVY = 0.0f;
+
+const float BOLA_RAIO = 0.6f * ESCALA;
+const float BOLA_ACEL = 0.35f;       
+const float BOLA_ATRITO = 0.95f;    
+const float BOLA_MAX_VEL = 20.0f;   
+
+bool teclaW = false, teclaA = false, teclaS = false, teclaD = false;
+bool teclaI = false, teclaJ = false, teclaK = false, teclaL = false;
+bool teclaCima = false, teclaBaixo = false, teclaEsq = false, teclaDir = false;
+
+void init() {
+    glClearColor(COR_FUNDO_R, COR_FUNDO_G, COR_FUNDO_B, 1.0f); 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluOrtho2D(-115.0, 115.0, -80.0, 150.0);
+    gluOrtho2D(-TELA_LIMITE_X, TELA_LIMITE_X, -TELA_LIMITE_Y, TELA_LIMITE_Y);
 }
 
-void arquibancada(){
-    float inicioY = 75.0f; // Um pouco acima da linha lateral do campo
-    float alturaDegrau = 20.0f;
-    int qtd = 5;
-
-    for (int i = 0; i < qtd; i++) {
-        // Alterna tons de cinza para parecer degraus
-        if (i % 2 == 0) glColor3f(0.35f, 0.35f, 0.35f);
-        else glColor3f(0.25f, 0.25f, 0.25f);
-
-        float y_base = inicioY + (i * alturaDegrau);
-        glRectf(-130.0f, y_base, 130.0f, y_base + alturaDegrau);
-    }
-}
-
-void desenhaCirculo(float x_centro, float y_centro, float raio, int segmentos, float angulo_inicio, float angulo_fim, float eixo_a, float eixo_b, int caminho){
-    
-    if (caminho == BORDA){
+void desenhaCirculo(float x_centro, float y_centro, float raio, int segmentos, float angulo_inicio, float angulo_fim, int caminho) {
+    if (caminho == BORDA) {
         glBegin(GL_LINE_STRIP);
-            for (int i = 0; i <= segmentos; i++){
-                float angulo = (angulo_inicio + (angulo_fim - angulo_inicio) * i / segmentos) * PI / 180.0;
-                glVertex2f((x_centro + raio * cos(angulo)) / eixo_a, (y_centro + raio * sin(angulo)) / eixo_b);
-            }
-        glEnd();
-    }
-    else if (caminho == PREENCHIDO){
+    } else {
         glBegin(GL_POLYGON);
-            for (int i = 0; i < segmentos; i++) {
-            // Ângulo em radianos: (i / total) * 2 * PI
-                double angulo = 2.0 * PI * i / segmentos;
-        
-                double x = (raio * cos(angulo)) + x_centro;
-                double y = (raio * sin(angulo)) + y_centro;
-                glVertex2d(x/eixo_a, y/eixo_b);
-            }
-        glEnd();
+    }
+    for (int i = 0; i <= segmentos; i++) {
+        float angulo = (angulo_inicio + (angulo_fim - angulo_inicio) * i / segmentos) * PI / 180.0;
+        glVertex2f(x_centro + raio * cos(angulo), y_centro + raio * sin(angulo));
+    }
+    glEnd();
+}
+
+void desenhaRede(float x_min, float x_max, float y_min, float y_max) {
+    glColor3f(0.8f, 0.8f, 0.8f);
+    glLineWidth(1.0f);
+    
+    float passoX = (x_max - x_min) / 4.0f; 
+    float passoY = (y_max - y_min) / 10.0f; 
+    
+    glBegin(GL_LINE_LOOP);
+    for (float x = x_min; x < x_max - 0.1f; x += passoX) {
+        for (float y = y_min; y < y_max - 0.1f; y += passoY) {
+            float cx = x + passoX / 2.0f;
+            float cy = y + passoY / 2.0f;
+            
+            glBegin(GL_LINE_LOOP);
+                glVertex2f(cx, y + passoY);
+                glVertex2f(x + passoX, cy);
+                glVertex2f(cx, y);
+                glVertex2f(x, cy);
+            glEnd();
+        }
+    }
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glLineWidth(2.0f);
+}
+
+void desenhaSegmento(int segmento, float x, float y, float w, float h, float t) {
+    glBegin(GL_POLYGON);
+    switch (segmento) {
+        case 0: glVertex2f(x, y+h); glVertex2f(x+w, y+h); glVertex2f(x+w-t, y+h-t); glVertex2f(x+t, y+h-t); break;
+        case 1: glVertex2f(x+w, y+h); glVertex2f(x+w, y+h/2); glVertex2f(x+w-t, y+h/2+t/2); glVertex2f(x+w-t, y+h-t); break;
+        case 2: glVertex2f(x+w, y+h/2); glVertex2f(x+w, y); glVertex2f(x+w-t, y+t); glVertex2f(x+w-t, y+h/2-t/2); break;
+        case 3: glVertex2f(x, y); glVertex2f(x+w, y); glVertex2f(x+w-t, y+t); glVertex2f(x+t, y+t); break;
+        case 4: glVertex2f(x, y+h/2); glVertex2f(x, y); glVertex2f(x+t, y+t); glVertex2f(x+t, y+h/2-t/2); break;
+        case 5: glVertex2f(x, y+h); glVertex2f(x, y+h/2); glVertex2f(x+t, y+h/2+t/2); glVertex2f(x+t, y+h-t); break;
+        case 6: glVertex2f(x+t/2, y+h/2+t/2); glVertex2f(x+w-t/2, y+h/2+t/2); glVertex2f(x+w-t/2, y+h/2-t/2); glVertex2f(x+t/2, y+h/2-t/2); break;
+    }
+    glEnd();
+}
+
+void desenhaDigito(int numero, float x, float y, float w, float h, float t) {
+    int segmentos[10][7] = {
+        {1,1,1,1,1,1,0}, {0,1,1,0,0,0,0}, {1,1,0,1,1,0,1}, {1,1,1,1,0,0,1}, {0,1,1,0,0,1,1}, 
+        {1,0,1,1,0,1,1}, {1,0,1,1,1,1,1}, {1,1,1,0,0,0,0}, {1,1,1,1,1,1,1}, {1,1,1,1,0,1,1}
+    };
+    glColor3f(1.0f, 0.0f, 0.0f);
+    for (int i = 0; i < 7; i++) {
+        if (segmentos[numero][i]) desenhaSegmento(i, x, y, w, h, t);
     }
 }
 
-void campo(){
+void desenhaOutdoor(float centro_x, float centro_y, int pontuacao) {
+    glColor3f(0.1f, 0.1f, 0.1f);
+    glRectf(centro_x - PLACAR_LARGURA/2, centro_y - PLACAR_ALTURA/2, 
+            centro_x + PLACAR_LARGURA/2, centro_y + PLACAR_ALTURA/2);
+            
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glLineWidth(3.0f);
+    glBegin(GL_LINE_LOOP);
+        glVertex2f(centro_x - PLACAR_LARGURA/2, centro_y - PLACAR_ALTURA/2);
+        glVertex2f(centro_x + PLACAR_LARGURA/2, centro_y - PLACAR_ALTURA/2);
+        glVertex2f(centro_x + PLACAR_LARGURA/2, centro_y + PLACAR_ALTURA/2);
+        glVertex2f(centro_x - PLACAR_LARGURA/2, centro_y + PLACAR_ALTURA/2);
+    glEnd();
 
-    // 1. Gramado (Fundo Verde)
-    glColor3f(0.133f, 0.545f, 0.133f);
-    glRectf(-M_X, -M_Y + 10, M_X, M_Y);
+    float espaco = 20.0f;
+    float y_base = centro_y - (DIGITO_ALTURA / 2.0f);
+    
+    float x_dezena = centro_x - (DIGITO_LARGURA + espaco/2.0f);
+    float x_unidade = centro_x + (espaco/2.0f);
 
-    // 2. Linhas Brancas
+    desenhaDigito(pontuacao / 10, x_dezena, y_base, DIGITO_LARGURA, DIGITO_ALTURA, DIGITO_ESPESSURA);
+    desenhaDigito(pontuacao % 10, x_unidade, y_base, DIGITO_LARGURA, DIGITO_ALTURA, DIGITO_ESPESSURA);
+}
+
+void desenhaTodosPlacares() {
+    float x_outdoor_esq = -TELA_LIMITE_X + (PLACAR_LARGURA / 2.0f) + 20.0f;
+    desenhaOutdoor(x_outdoor_esq, PLACAR_POS_Y, placarEsq);
+
+    float x_outdoor_dir = TELA_LIMITE_X - (PLACAR_LARGURA / 2.0f) - 20.0f;
+    desenhaOutdoor(x_outdoor_dir, PLACAR_POS_Y, placarDir);
+}
+
+void campo() {
+    float largura_faixa = CAMPO_C / QTD_FAIXAS_GRAMA;
+    
+    for (int i = 0; i < QTD_FAIXAS_GRAMA; i++) {
+        if (i % 2 == 0) {
+            glColor3f(GRAMA_CLARA_R, GRAMA_CLARA_G, GRAMA_CLARA_B);
+        } else {
+            glColor3f(GRAMA_ESCURA_R, GRAMA_ESCURA_G, GRAMA_ESCURA_B);
+        }
+        float x_inicio = -MEIO_C + (i * largura_faixa);
+        float x_fim = x_inicio + largura_faixa;
+        glRectf(x_inicio, -MEIO_L, x_fim, MEIO_L);
+    }
+
     glColor3f(1.0f, 1.0f, 1.0f);
     glLineWidth(2.0f);
 
-    // Borda Externa
     glBegin(GL_LINE_LOOP);
-        glVertex2f(-M_X, -M_Y + 10);
-        glVertex2f( M_X, -M_Y + 10);
-        glVertex2f( M_X,  M_Y);
-        glVertex2f(-M_X,  M_Y);
+        glVertex2f(-MEIO_C, -MEIO_L);
+        glVertex2f( MEIO_C, -MEIO_L);
+        glVertex2f( MEIO_C,  MEIO_L);
+        glVertex2f(-MEIO_C,  MEIO_L);
     glEnd();
 
-    // Linha de Meio Campo
     glBegin(GL_LINES);
-        glVertex2f(0.0f, -M_Y + 10);
-        glVertex2f(0.0f,  M_Y);
+        glVertex2f(0.0f, -MEIO_L);
+        glVertex2f(0.0f,  MEIO_L);
     glEnd();
 
-    // Círculo Central Perfeitamente Redondo (Raio 17.4px, 100 segmentos)
-    desenhaCirculo(0, 0, 17.4f, 100, 0, 360, 1.75, 1, BORDA);
-    
-    // Ponto Central
-    desenhaCirculo(0, 0, 2, 60, 0, 360, 1.75, 1, PREENCHIDO); 
+    desenhaCirculo(0, 0, RAIO_CENTRO, 100, 0, 360, BORDA);
+    desenhaCirculo(0, 0, RAIO_PONTO_CENTRAL, 30, 0, 360, PREENCHIDO); 
 
-    // --- LADO ESQUERDO ---
-    // Grande Área (31.4 x 76.8)
+    float ga_y = AREA_G_L / 2.0f;
+    float pa_y = AREA_P_L / 2.0f;
+    float gol_y = GOL_L / 2.0f;
+
+    float x_fundo_esq = -MEIO_C;
     glBegin(GL_LINE_STRIP);
-        glVertex2f(-100.0f,  38.4f);
-        glVertex2f(-68.6f,   38.4f);
-        glVertex2f(-68.6f,  -38.4f);
-        glVertex2f(-100.0f, -38.4f);
+        glVertex2f(x_fundo_esq, ga_y); glVertex2f(x_fundo_esq + AREA_G_C, ga_y);
+        glVertex2f(x_fundo_esq + AREA_G_C, -ga_y); glVertex2f(x_fundo_esq, -ga_y);
     glEnd();
-
-    // Pequena Área (10.5 x 34.9)
     glBegin(GL_LINE_STRIP);
-        glVertex2f(-100.0f,  17.45f);
-        glVertex2f(-89.5f,   17.45f);
-        glVertex2f(-89.5f,  -17.45f);
-        glVertex2f(-100.0f, -17.45f);
+        glVertex2f(x_fundo_esq, pa_y); glVertex2f(x_fundo_esq + AREA_P_C, pa_y);
+        glVertex2f(x_fundo_esq + AREA_P_C, -pa_y); glVertex2f(x_fundo_esq, -pa_y);
     glEnd();
 
-    // Marca do Pênalti
-    desenhaCirculo(-140, 0, 2, 60, 0, 360, 1.75, 1, PREENCHIDO); 
+    float x_penalti_esq = x_fundo_esq + MARCA_PENALTI;
+    desenhaCirculo(x_penalti_esq, 0, RAIO_MARCA_PENALTI_ESQ, 30, 0, 360, PREENCHIDO);
 
-    // Meia-Lua Esquerda (Centro no Pênalti: -79.0, Raio 17.4)
-    desenhaCirculo(-79.0f, 0, 17.4f, 50, -53, 53, 1, 1, BORDA);
+    float dist_para_linha = AREA_G_C - MARCA_PENALTI;
+    float angulo = acos(dist_para_linha / RAIO_CENTRO) * 180.0 / PI;
+    desenhaCirculo(x_penalti_esq, 0, RAIO_CENTRO, 50, -angulo, angulo, BORDA);
 
-    // Gol Esquerdo (Profundidade 4.6, Largura traves 13.9)
+    desenhaRede(x_fundo_esq - GOL_PROF, x_fundo_esq, -gol_y, gol_y);
     glBegin(GL_LINE_STRIP);
-        glVertex2f(-100.0f, -6.95f);
-        glVertex2f(-104.6f, -6.95f);
-        glVertex2f(-104.6f,  6.95f);
-        glVertex2f(-100.0f,  6.95f);
+        glVertex2f(x_fundo_esq, gol_y); glVertex2f(x_fundo_esq - GOL_PROF, gol_y);
+        glVertex2f(x_fundo_esq - GOL_PROF, -gol_y); glVertex2f(x_fundo_esq, -gol_y);
     glEnd();
 
-    // --- LADO DIREITO (Espelhado) ---
-    // Grande Área
+    float x_fundo_dir = MEIO_C;
     glBegin(GL_LINE_STRIP);
-        glVertex2f(100.0f,  38.4f);
-        glVertex2f(68.6f,   38.4f);
-        glVertex2f(68.6f,  -38.4f);
-        glVertex2f(100.0f, -38.4f);
+        glVertex2f(x_fundo_dir, ga_y); glVertex2f(x_fundo_dir - AREA_G_C, ga_y);
+        glVertex2f(x_fundo_dir - AREA_G_C, -ga_y); glVertex2f(x_fundo_dir, -ga_y);
     glEnd();
-
-    // Pequena Área
     glBegin(GL_LINE_STRIP);
-        glVertex2f(100.0f,  17.45f);
-        glVertex2f(89.5f,   17.45f);
-        glVertex2f(89.5f,  -17.45f);
-        glVertex2f(100.0f, -17.45f);
+        glVertex2f(x_fundo_dir, pa_y); glVertex2f(x_fundo_dir - AREA_P_C, pa_y);
+        glVertex2f(x_fundo_dir - AREA_P_C, -pa_y); glVertex2f(x_fundo_dir, -pa_y);
     glEnd();
 
-    // Marca do Pênalti
-    desenhaCirculo(140, 0, 2, 60, 0, 360, 1.75, 1, PREENCHIDO); 
+    float x_penalti_dir = x_fundo_dir - MARCA_PENALTI;
+    desenhaCirculo(x_penalti_dir, 0, RAIO_MARCA_PENALTI_DIR, 30, 0, 360, PREENCHIDO);
+    desenhaCirculo(x_penalti_dir, 0, RAIO_CENTRO, 50, 180 - angulo, 180 + angulo, BORDA);
 
-    // Meia-Lua Direita
-    desenhaCirculo(79.0f, 0, 17.4f, 50, 127, 233, 1, 1, BORDA);
-
-    // Gol Direito
+    desenhaRede(x_fundo_dir, x_fundo_dir + GOL_PROF, -gol_y, gol_y);
     glBegin(GL_LINE_STRIP);
-        glVertex2f(100.0f, -6.95f);
-        glVertex2f(104.6f, -6.95f);
-        glVertex2f(104.6f,  6.95f);
-        glVertex2f(100.0f,  6.95f);
+        glVertex2f(x_fundo_dir, gol_y); glVertex2f(x_fundo_dir + GOL_PROF, gol_y);
+        glVertex2f(x_fundo_dir + GOL_PROF, -gol_y); glVertex2f(x_fundo_dir, -gol_y);
     glEnd();
 
-    // Escanteios (Raio 1.9)
-    desenhaCirculo(-100.5, -67.75, 5, 15, -10, 90, 1, 1, BORDA);    // Inf. Esq
-    desenhaCirculo( 100, -64.75, 1.9, 15, 90, 180, 1, 1, BORDA);  // Inf. Dir
-    desenhaCirculo( 100,  64.75, 1.9, 15, 180, 270, 1, 1, BORDA); // Sup. Dir
-    desenhaCirculo(-100,  64.75, 1.9, 15, 270, 360, 1, 1, BORDA); // Sup. Esq
-
-    glFlush();
-
+    desenhaCirculo(-MEIO_C, -MEIO_L, RAIO_ESCANTEIO, 15, 0, 90, BORDA);
+    desenhaCirculo( MEIO_C, -MEIO_L, RAIO_ESCANTEIO, 15, 90, 180, BORDA);
+    desenhaCirculo( MEIO_C,  MEIO_L, RAIO_ESCANTEIO, 15, 180, 270, BORDA);
+    desenhaCirculo(-MEIO_C,  MEIO_L, RAIO_ESCANTEIO, 15, 270, 360, BORDA);
 }
 
-void geral(){
+void desenhaBola() {
+    glColor3f(1.0f, 1.0f, 1.0f);
+    desenhaCirculo(bolaX, bolaY, BOLA_RAIO, 30, 0, 360, PREENCHIDO);
+}
+
+void atualizaFisica(int value) {
+    if (teclaW || teclaI || teclaCima)  bolaVY += BOLA_ACEL;
+    if (teclaS || teclaK || teclaBaixo) bolaVY -= BOLA_ACEL;
+    if (teclaA || teclaJ || teclaEsq)   bolaVX -= BOLA_ACEL;
+    if (teclaD || teclaL || teclaDir)   bolaVX += BOLA_ACEL;
+
+    bolaVX *= BOLA_ATRITO;
+    bolaVY *= BOLA_ATRITO;
+
+    float velAtual = sqrt(bolaVX * bolaVX + bolaVY * bolaVY);
+    if (velAtual > BOLA_MAX_VEL) {
+        bolaVX = (bolaVX / velAtual) * BOLA_MAX_VEL;
+        bolaVY = (bolaVY / velAtual) * BOLA_MAX_VEL;
+    }
+
+    bolaX += bolaVX;
+    bolaY += bolaVY;
+
+    if (bolaX > MEIO_C || bolaX < -MEIO_C) bolaVX *= -1; 
+    if (bolaY > MEIO_L || bolaY < -MEIO_L) bolaVY *= -1;
+
+    glutPostRedisplay();
+    glutTimerFunc(16, atualizaFisica, 0); 
+}
+
+void geral() {
+    glClear(GL_COLOR_BUFFER_BIT); 
     
-    glClear(GL_COLOR_BUFFER_BIT); //deixa tudo verde
-    //arquibancada();
+    desenhaTodosPlacares();
+    
+    glPushMatrix();
+    glTranslatef(OFFSET_CAMPO_X, OFFSET_CAMPO_Y, 0.0f);
+    
     campo();
-
+    desenhaBola();
     
-    glFlush();
+    glPopMatrix(); 
+    
+    glutSwapBuffers(); 
 }
 
-int main(int argc, char** argv){
+void tecladoAperta(unsigned char key, int x, int y) {
+    switch (key) {
+        case 'w': case 'W': teclaW = true; break;
+        case 's': case 'S': teclaS = true; break;
+        case 'a': case 'A': teclaA = true; break;
+        case 'd': case 'D': teclaD = true; break;
+        case 'i': case 'I': teclaI = true; break;
+        case 'k': case 'K': teclaK = true; break;
+        case 'j': case 'J': teclaJ = true; break;
+        case 'l': case 'L': teclaL = true; break;
+    }
+}
 
+void tecladoSolta(unsigned char key, int x, int y) {
+    switch (key) {
+        case 'w': case 'W': teclaW = false; break;
+        case 's': case 'S': teclaS = false; break;
+        case 'a': case 'A': teclaA = false; break;
+        case 'd': case 'D': teclaD = false; break;
+        case 'i': case 'I': teclaI = false; break;
+        case 'k': case 'K': teclaK = false; break;
+        case 'j': case 'J': teclaJ = false; break;
+        case 'l': case 'L': teclaL = false; break;
+    }
+}
+
+void teclasEspeciaisAperta(int key, int x, int y) {
+    switch (key) {
+        case GLUT_KEY_UP: teclaCima = true; break;
+        case GLUT_KEY_DOWN: teclaBaixo = true; break;
+        case GLUT_KEY_LEFT: teclaEsq = true; break;
+        case GLUT_KEY_RIGHT: teclaDir = true; break;
+    }
+}
+
+void teclasEspeciaisSolta(int key, int x, int y) {
+    switch (key) {
+        case GLUT_KEY_UP: teclaCima = false; break;
+        case GLUT_KEY_DOWN: teclaBaixo = false; break;
+        case GLUT_KEY_LEFT: teclaEsq = false; break;
+        case GLUT_KEY_RIGHT: teclaDir = false; break;
+    }
+}
+
+int main(int argc, char** argv) {
     glutInit(&argc, argv);
-
-    
-    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-	glutCreateWindow("futebol");
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+    glutCreateWindow("Futebol - Copa 2026");
     glutFullScreen();
-
+    
     init();
-
+    
     glutDisplayFunc(geral);
+    
+    glutKeyboardFunc(tecladoAperta);
+    glutKeyboardUpFunc(tecladoSolta);
+    glutSpecialFunc(teclasEspeciaisAperta);
+    glutSpecialUpFunc(teclasEspeciaisSolta);
+    
+    glutTimerFunc(16, atualizaFisica, 0);
 
     glutMainLoop();
     return 0;
