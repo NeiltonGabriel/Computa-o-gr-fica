@@ -298,22 +298,22 @@ void resolverSaidaDeBola(int evento) {
             bolaX = 0.0f; bolaY = 0.0f;
             break;
         case EVENTO_LATERAL_CIMA:
-            bolaX = ultimaSaidaX; bolaY = MEIO_L;
+            bolaX = ultimaSaidaX; bolaY = MEIO_L - BOLA_RAIO - 1.0f;
             break;
         case EVENTO_LATERAL_BAIXO:
-            bolaX = ultimaSaidaX; bolaY = -MEIO_L;
+            bolaX = ultimaSaidaX; bolaY = -MEIO_L + BOLA_RAIO + 1.0f;
             break;
         case EVENTO_ESCANTEIO_ESQ_CIMA:
-            bolaX = -MEIO_C; bolaY = MEIO_L;
+            bolaX = -MEIO_C + BOLA_RAIO + 1.0f; bolaY = MEIO_L - BOLA_RAIO - 1.0f;
             break;
         case EVENTO_ESCANTEIO_ESQ_BAIXO:
-            bolaX = -MEIO_C; bolaY = -MEIO_L;
+            bolaX = -MEIO_C + BOLA_RAIO + 1.0f; bolaY = -MEIO_L + BOLA_RAIO + 1.0f;
             break;
         case EVENTO_ESCANTEIO_DIR_CIMA:
-            bolaX = MEIO_C; bolaY = MEIO_L;
+            bolaX = MEIO_C - BOLA_RAIO - 1.0f; bolaY = MEIO_L - BOLA_RAIO - 1.0f;
             break;
         case EVENTO_ESCANTEIO_DIR_BAIXO:
-            bolaX = MEIO_C; bolaY = -MEIO_L;
+            bolaX = MEIO_C - BOLA_RAIO - 1.0f; bolaY = -MEIO_L + BOLA_RAIO + 1.0f;
             break;
         case EVENTO_TOMADA_BOLA:
             break;
@@ -357,6 +357,55 @@ void atualizaFisica(int value) {
 
     bolaX += bolaVX;
     bolaY += bolaVY;
+
+    float px[4] = {-MEIO_C, -MEIO_C, MEIO_C, MEIO_C};
+    float py[4] = {GOL_L / 2.0f, -GOL_L / 2.0f, GOL_L / 2.0f, -GOL_L / 2.0f};
+    for (int i = 0; i < 4; i++) {
+        float dx = bolaX - px[i];
+        float dy = bolaY - py[i];
+        float dist = sqrt(dx * dx + dy * dy);
+        if (dist < BOLA_RAIO) {
+            float nx = dx / dist;
+            float ny = dy / dist;
+            float dot = bolaVX * nx + bolaVY * ny;
+            bolaVX = bolaVX - 2 * dot * nx;
+            bolaVY = bolaVY - 2 * dot * ny;
+            bolaX = px[i] + nx * (BOLA_RAIO + 0.1f);
+            bolaY = py[i] + ny * (BOLA_RAIO + 0.1f);
+        }
+    }
+
+    if (bolaX < -MEIO_C) {
+        if (bolaY < GOL_L / 2.0f && bolaY > -GOL_L / 2.0f) {
+            if (bolaX - BOLA_RAIO < -MEIO_C - GOL_PROF) {
+                bolaX = -MEIO_C - GOL_PROF + BOLA_RAIO;
+                bolaVX = 0.0f; bolaVY = 0.0f;
+            }
+            if (bolaY + BOLA_RAIO > GOL_L / 2.0f) {
+                bolaY = GOL_L / 2.0f - BOLA_RAIO;
+                bolaVX = 0.0f; bolaVY = 0.0f;
+            }
+            if (bolaY - BOLA_RAIO < -GOL_L / 2.0f) {
+                bolaY = -GOL_L / 2.0f + BOLA_RAIO;
+                bolaVX = 0.0f; bolaVY = 0.0f;
+            }
+        }
+    } else if (bolaX > MEIO_C) {
+        if (bolaY < GOL_L / 2.0f && bolaY > -GOL_L / 2.0f) {
+            if (bolaX + BOLA_RAIO > MEIO_C + GOL_PROF) {
+                bolaX = MEIO_C + GOL_PROF - BOLA_RAIO;
+                bolaVX = 0.0f; bolaVY = 0.0f;
+            }
+            if (bolaY + BOLA_RAIO > GOL_L / 2.0f) {
+                bolaY = GOL_L / 2.0f - BOLA_RAIO;
+                bolaVX = 0.0f; bolaVY = 0.0f;
+            }
+            if (bolaY - BOLA_RAIO < -GOL_L / 2.0f) {
+                bolaY = -GOL_L / 2.0f + BOLA_RAIO;
+                bolaVX = 0.0f; bolaVY = 0.0f;
+            }
+        }
+    }
 
     if (bolaEmJogo) {
         if (bolaY - BOLA_RAIO > MEIO_L) {
