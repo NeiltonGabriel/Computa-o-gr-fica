@@ -7,22 +7,22 @@
 #define BORDA 0
 
 const float TELA_LIMITE_X = 1000.0f;
-const float TELA_LIMITE_Y = 700.0f;
+const float TELA_LIMITE_Y = 600.0f;
 const float COR_FUNDO_R = 0.2f;
 const float COR_FUNDO_G = 0.2f;
 const float COR_FUNDO_B = 0.2f;
 
 const float OFFSET_CAMPO_X = 0.0f;
-const float OFFSET_CAMPO_Y = -150.0f;
+const float OFFSET_CAMPO_Y = -125.0f;
 
-const float PLACAR_LARGURA = 130.0f;
-const float PLACAR_ALTURA = 120.0f;
-const float DIGITO_LARGURA = 25.0f;
-const float DIGITO_ALTURA = 45.0f;
-const float DIGITO_ESPESSURA = 5.0f;
+const float PLACAR_LARGURA = 250.0f;
+const float PLACAR_ALTURA = 240.0f;
+const float DIGITO_LARGURA = 85.0f;
+const float DIGITO_ALTURA = 170.0f;
+const float DIGITO_ESPESSURA = 10.0f;
 const float PLACAR_POS_Y = 150.0f;
 
-const int QTD_FAIXAS_GRAMA = 12;
+const int QTD_FAIXAS_GRAMA = 10;
 const float GRAMA_CLARA_R = 0.133f;
 const float GRAMA_CLARA_G = 0.545f;
 const float GRAMA_CLARA_B = 0.133f;
@@ -30,7 +30,7 @@ const float GRAMA_ESCURA_R = 0.100f;
 const float GRAMA_ESCURA_G = 0.450f;
 const float GRAMA_ESCURA_B = 0.100f;
 
-#define ESCALA 15.0f
+#define ESCALA 13.0f
 #define CAMPO_C (105.0f * ESCALA)
 #define CAMPO_L (68.0f * ESCALA)
 
@@ -44,9 +44,9 @@ const float GOL_PROF = 2.4f * ESCALA;
 const float MARCA_PENALTI = 11.0f * ESCALA;
 const float RAIO_ESCANTEIO = 2.0f * ESCALA;
 
-const float RAIO_PONTO_CENTRAL = 0.5f * ESCALA;
-const float RAIO_MARCA_PENALTI_ESQ = 0.5f * ESCALA;
-const float RAIO_MARCA_PENALTI_DIR = 0.5f * ESCALA;
+const float RAIO_PONTO_CENTRAL = 0.35f * ESCALA;
+const float RAIO_MARCA_PENALTI_ESQ = 0.35f * ESCALA;
+const float RAIO_MARCA_PENALTI_DIR = 0.35f * ESCALA;
 
 const float MEIO_C = CAMPO_C / 2.0f; 
 const float MEIO_L = CAMPO_L / 2.0f; 
@@ -70,7 +70,7 @@ float bolaY = 0.0f;
 float bolaVX = 0.0f;
 float bolaVY = 0.0f;
 
-const float BOLA_RAIO = 0.4f * ESCALA;
+const float BOLA_RAIO = 0.6f * ESCALA;
 const float BOLA_ACEL = 0.35f;       
 const float BOLA_ATRITO = 0.95f;    
 const float BOLA_MAX_VEL = 20.0f;   
