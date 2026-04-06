@@ -57,8 +57,10 @@ typedef enum {
     EVENTO_GOL_DIR,
     EVENTO_LATERAL_CIMA,
     EVENTO_LATERAL_BAIXO,
-    EVENTO_ESCANTEIO_ESQ,
-    EVENTO_ESCANTEIO_DIR,
+    EVENTO_ESCANTEIO_ESQ_CIMA,
+    EVENTO_ESCANTEIO_ESQ_BAIXO,
+    EVENTO_ESCANTEIO_DIR_CIMA,
+    EVENTO_ESCANTEIO_DIR_BAIXO,
     EVENTO_TOMADA_BOLA
 } TipoEvento;
 
@@ -78,6 +80,11 @@ const float BOLA_MAX_VEL = 20.0f;
 bool teclaW = false, teclaA = false, teclaS = false, teclaD = false;
 bool teclaI = false, teclaJ = false, teclaK = false, teclaL = false;
 bool teclaCima = false, teclaBaixo = false, teclaEsq = false, teclaDir = false;
+
+bool inputsBloqueados = false;
+bool bolaEmJogo = true;
+float ultimaSaidaX = 0.0f;
+float ultimaSaidaY = 0.0f;
 
 void init() {
     glClearColor(COR_FUNDO_R, COR_FUNDO_G, COR_FUNDO_B, 1.0f); 
@@ -271,34 +278,73 @@ void desenhaBola() {
     desenhaCirculo(bolaX, bolaY, BOLA_RAIO, 30, 0, 360, PREENCHIDO);
 }
 
-void dispararEvento(TipoEvento evento) {
+void liberarInputs(int value) {
+    inputsBloqueados = false;
+}
+
+void bloquearInputsTempo(int tempo_ms) {
+    inputsBloqueados = true;
+    glutTimerFunc(tempo_ms, liberarInputs, 0);
+}
+
+void resolverSaidaDeBola(int evento) {
     switch (evento) {
         case EVENTO_GOL_ESQ:
             placarDir++;
-            bolaX = 0.0f; bolaY = 0.0f; bolaVX = 0.0f; bolaVY = 0.0f;
+            bolaX = 0.0f; bolaY = 0.0f;
             break;
         case EVENTO_GOL_DIR:
             placarEsq++;
-            bolaX = 0.0f; bolaY = 0.0f; bolaVX = 0.0f; bolaVY = 0.0f;
+            bolaX = 0.0f; bolaY = 0.0f;
             break;
         case EVENTO_LATERAL_CIMA:
+            bolaX = ultimaSaidaX; bolaY = MEIO_L;
+            break;
         case EVENTO_LATERAL_BAIXO:
-        case EVENTO_ESCANTEIO_ESQ:
-        case EVENTO_ESCANTEIO_DIR:
-            bolaX = 0.0f; bolaY = 0.0f; bolaVX = 0.0f; bolaVY = 0.0f;
+            bolaX = ultimaSaidaX; bolaY = -MEIO_L;
+            break;
+        case EVENTO_ESCANTEIO_ESQ_CIMA:
+            bolaX = -MEIO_C; bolaY = MEIO_L;
+            break;
+        case EVENTO_ESCANTEIO_ESQ_BAIXO:
+            bolaX = -MEIO_C; bolaY = -MEIO_L;
+            break;
+        case EVENTO_ESCANTEIO_DIR_CIMA:
+            bolaX = MEIO_C; bolaY = MEIO_L;
+            break;
+        case EVENTO_ESCANTEIO_DIR_BAIXO:
+            bolaX = MEIO_C; bolaY = -MEIO_L;
             break;
         case EVENTO_TOMADA_BOLA:
             break;
-        default:
-            break;
     }
+    bolaVX = 0.0f; 
+    bolaVY = 0.0f;
+    bolaEmJogo = true;
+    inputsBloqueados = false;
+}
+
+void iniciarSequenciaSaida(TipoEvento evento) {
+    bolaEmJogo = false;
+    inputsBloqueados = true;
+    ultimaSaidaX = bolaX;
+    ultimaSaidaY = bolaY;
+    
+    if(ultimaSaidaX > MEIO_C) ultimaSaidaX = MEIO_C;
+    if(ultimaSaidaX < -MEIO_C) ultimaSaidaX = -MEIO_C;
+    if(ultimaSaidaY > MEIO_L) ultimaSaidaY = MEIO_L;
+    if(ultimaSaidaY < -MEIO_L) ultimaSaidaY = -MEIO_L;
+
+    glutTimerFunc(1500, resolverSaidaDeBola, evento);
 }
 
 void atualizaFisica(int value) {
-    if (teclaW || teclaI || teclaCima)  bolaVY += BOLA_ACEL;
-    if (teclaS || teclaK || teclaBaixo) bolaVY -= BOLA_ACEL;
-    if (teclaA || teclaJ || teclaEsq)   bolaVX -= BOLA_ACEL;
-    if (teclaD || teclaL || teclaDir)   bolaVX += BOLA_ACEL;
+    if (!inputsBloqueados) {
+        if (teclaW || teclaI || teclaCima)  bolaVY += BOLA_ACEL;
+        if (teclaS || teclaK || teclaBaixo) bolaVY -= BOLA_ACEL;
+        if (teclaA || teclaJ || teclaEsq)   bolaVX -= BOLA_ACEL;
+        if (teclaD || teclaL || teclaDir)   bolaVX += BOLA_ACEL;
+    }
 
     bolaVX *= BOLA_ATRITO;
     bolaVY *= BOLA_ATRITO;
@@ -312,21 +358,25 @@ void atualizaFisica(int value) {
     bolaX += bolaVX;
     bolaY += bolaVY;
 
-    if (bolaY - BOLA_RAIO > MEIO_L) {
-        dispararEvento(EVENTO_LATERAL_CIMA);
-    } else if (bolaY + BOLA_RAIO < -MEIO_L) {
-        dispararEvento(EVENTO_LATERAL_BAIXO);
-    } else if (bolaX - BOLA_RAIO > MEIO_C) {
-        if (bolaY < (GOL_L / 2.0f) && bolaY > -(GOL_L / 2.0f)) {
-            dispararEvento(EVENTO_GOL_DIR);
-        } else {
-            dispararEvento(EVENTO_ESCANTEIO_DIR);
-        }
-    } else if (bolaX + BOLA_RAIO < -MEIO_C) {
-        if (bolaY < (GOL_L / 2.0f) && bolaY > -(GOL_L / 2.0f)) {
-            dispararEvento(EVENTO_GOL_ESQ);
-        } else {
-            dispararEvento(EVENTO_ESCANTEIO_ESQ);
+    if (bolaEmJogo) {
+        if (bolaY - BOLA_RAIO > MEIO_L) {
+            iniciarSequenciaSaida(EVENTO_LATERAL_CIMA);
+        } else if (bolaY + BOLA_RAIO < -MEIO_L) {
+            iniciarSequenciaSaida(EVENTO_LATERAL_BAIXO);
+        } else if (bolaX - BOLA_RAIO > MEIO_C) {
+            if (bolaY < (GOL_L / 2.0f) && bolaY > -(GOL_L / 2.0f)) {
+                iniciarSequenciaSaida(EVENTO_GOL_DIR);
+            } else {
+                if (bolaY > 0) iniciarSequenciaSaida(EVENTO_ESCANTEIO_DIR_CIMA);
+                else iniciarSequenciaSaida(EVENTO_ESCANTEIO_DIR_BAIXO);
+            }
+        } else if (bolaX + BOLA_RAIO < -MEIO_C) {
+            if (bolaY < (GOL_L / 2.0f) && bolaY > -(GOL_L / 2.0f)) {
+                iniciarSequenciaSaida(EVENTO_GOL_ESQ);
+            } else {
+                if (bolaY > 0) iniciarSequenciaSaida(EVENTO_ESCANTEIO_ESQ_CIMA);
+                else iniciarSequenciaSaida(EVENTO_ESCANTEIO_ESQ_BAIXO);
+            }
         }
     }
 
