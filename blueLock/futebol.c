@@ -3,11 +3,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-
-/*
 #include <windows.h>
 #include <mmsystem.h>
-*/
 
 #define PI 3.14159265
 #define PREENCHIDO 1
@@ -15,6 +12,16 @@
 
 #define FONTE_TEXTO_PADRAO GLUT_BITMAP_HELVETICA_18
 #define FONTE_TEXTO_GRANDE GLUT_BITMAP_TIMES_ROMAN_24
+
+const char* ARQ_SOM_AMBIENTE = "ambiente.wav";
+const char* ARQ_SOM_GOL = "gol.wav";
+const char* ARQ_SOM_INTERCEPTACAO = "interceptacao.wav";
+const char* ARQ_SOM_DEFESA = "defesa.wav";
+const char* ARQ_SOM_DISPARADA = "disparada.wav";
+const char* ARQ_SOM_BOLA_ANDANDO = "bola_andando.wav";
+const char* ARQ_SOM_CHAPEU = "chapeu.wav";
+const char* ARQ_SOM_TORCIDA_VIBRA = "torcida.wav";
+const char* ARQ_SOM_APITO = "apito.wav";
 
 float VOL_AMBIENTE = 0.5f;
 float VOL_GOL = 1.0f;
@@ -33,6 +40,21 @@ const float COR_TIME_ESQ_B = 1.0f;
 const float COR_TIME_DIR_R = 1.0f;
 const float COR_TIME_DIR_G = 0.2f;
 const float COR_TIME_DIR_B = 0.2f;
+
+const float VEL_GK = 1.5f;
+const float VEL_DEF = 2.8f;
+const float VEL_MID = 3.5f;
+const float VEL_ATK = 4.0f;
+
+const float PELE_1_R = 1.0f;
+const float PELE_1_G = 0.8f;
+const float PELE_1_B = 0.6f;
+const float PELE_2_R = 0.8f;
+const float PELE_2_G = 0.6f;
+const float PELE_2_B = 0.4f;
+const float PELE_3_R = 0.4f;
+const float PELE_3_G = 0.2f;
+const float PELE_3_B = 0.1f;
 
 const float ESPESSURA_CONTORNO_BOLA = 2.5f;
 #define TIME_INICIAL_DIREITA 1
@@ -75,7 +97,7 @@ const float CONTROLES_LARGURA = 265.0f;
 const float CONTROLES_ALTURA = 150.0f;
 const char* TEXTO_CTRL_TITULO = "CONTROLES";
 const char* TEXTO_CTRL_1 = "WASD/Setas: Mover";
-const char* TEXTO_CTRL_2 = "ESPACO: Especial";
+const char* TEXTO_CTRL_2 = "ESPACO: Pular";
 
 const float ESCALA_MAX_CHAPEU = 1.75f;
 
@@ -101,6 +123,9 @@ const float GOL_PROF = 2.4f * ESCALA;
 const float MARCA_PENALTI = 11.0f * ESCALA;
 const float RAIO_ESCANTEIO = 2.0f * ESCALA;
 
+const float RAIO_DEFESA_GK = 47.5f;
+const float DISTANCIA_MINIMA_COBRANCA = 39.0f;
+
 const float RAIO_PONTO_CENTRAL = 0.35f * ESCALA;
 const float RAIO_MARCA_PENALTI_ESQ = 0.35f * ESCALA;
 const float RAIO_MARCA_PENALTI_DIR = 0.35f * ESCALA;
@@ -123,6 +148,20 @@ typedef enum {
     EVENTO_FIM_JOGO
 } TipoEvento;
 
+typedef struct {
+    int id;
+    int time;
+    int role;
+    float x, y;
+    float homeX, homeY;
+    float speed;
+    float skinR, skinG, skinB;
+    float animOffset;
+    float angle;
+} Jogador;
+
+Jogador jogadores[22];
+
 int placarEsq = 0;
 int placarDir = 0;
 
@@ -137,8 +176,8 @@ const float BOLA_ACEL = 0.35f;
 const float BOLA_ATRITO = 0.95f;    
 const float BOLA_MAX_VEL = 20.0f;   
 
-const float TEMPO_CHAPEU_SEC = 3.0f;
-const float DURACAO_CHAPEU_SEC = 0.8f;
+const float TEMPO_CHAPEU_SEC = 1.5f;
+const float DURACAO_CHAPEU_SEC = 0.5f;
 float progressoChapeu = 0.0f;
 bool executandoChapeu = false;
 float tempoAtualChapeu = 0.0f;
@@ -161,29 +200,72 @@ bool segundoTempo = false;
 bool fimDeJogo = false;
 bool gramaInvertida = false;
 bool posseDireita = TIME_INICIAL_DIREITA;
+bool defendendoGolContra = false;
+bool esperandoCobranca = false;
+
+void initJogadores() {
+    float sX[11] = { -MEIO_C + 20.0f, -MEIO_C + 180.0f, -MEIO_C + 180.0f, -MEIO_C + 180.0f, -MEIO_C + 180.0f, -MEIO_C + 350.0f, -MEIO_C + 350.0f, -MEIO_C + 350.0f, -MEIO_C + 350.0f, -80.0f, -80.0f };
+    float sY[11] = { 0.0f, -250.0f, -80.0f, 80.0f, 250.0f, -250.0f, -80.0f, 80.0f, 250.0f, -100.0f, 100.0f };
+    int sRole[11] = { 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3 };
+
+    for(int i = 0; i < 11; i++) {
+        jogadores[i].id = i;
+        jogadores[i].time = 0;
+        jogadores[i].homeX = sX[i];
+        jogadores[i].homeY = sY[i];
+        jogadores[i].x = sX[i];
+        jogadores[i].y = sY[i];
+        jogadores[i].role = sRole[i];
+        float baseSpeed = (sRole[i]==0)?VEL_GK:(sRole[i]==1)?VEL_DEF:(sRole[i]==2)?VEL_MID:VEL_ATK;
+        jogadores[i].speed = baseSpeed + (i * 0.05f);
+        int s = i % 3;
+        jogadores[i].skinR = s==0?PELE_1_R:(s==1?PELE_2_R:PELE_3_R);
+        jogadores[i].skinG = s==0?PELE_1_G:(s==1?PELE_2_G:PELE_3_G);
+        jogadores[i].skinB = s==0?PELE_1_B:(s==1?PELE_2_B:PELE_3_B);
+        jogadores[i].animOffset = (float)i;
+        jogadores[i].angle = 0.0f;
+
+        int j = i + 11;
+        jogadores[j].id = j;
+        jogadores[j].time = 1;
+        jogadores[j].homeX = -sX[i];
+        jogadores[j].homeY = sY[i];
+        jogadores[j].x = -sX[i];
+        jogadores[j].y = sY[i];
+        jogadores[j].role = sRole[i];
+        baseSpeed = (sRole[i]==0)?VEL_GK:(sRole[i]==1)?VEL_DEF:(sRole[i]==2)?VEL_MID:VEL_ATK;
+        jogadores[j].speed = baseSpeed + (j * 0.05f);
+        s = j % 3;
+        jogadores[j].skinR = s==0?PELE_1_R:(s==1?PELE_2_R:PELE_3_R);
+        jogadores[j].skinG = s==0?PELE_1_G:(s==1?PELE_2_G:PELE_3_G);
+        jogadores[j].skinB = s==0?PELE_1_B:(s==1?PELE_2_B:PELE_3_B);
+        jogadores[j].animOffset = (float)j;
+        jogadores[j].angle = 180.0f;
+    }
+}
 
 void tocarSomArquivo(const char* arquivo, float volume) {
-    /*
     char comando[256];
     sprintf(comando, "setaudio %s volume to %d", arquivo, (int)(volume * 1000));
     mciSendString(comando, NULL, 0, NULL);
     sprintf(comando, "play %s from 0", arquivo);
     mciSendString(comando, NULL, 0, NULL);
-    */
 }
 
 void atualizarSomBola(float velocidade) {
-    /*
     int vol = (int)((velocidade / BOLA_MAX_VEL) * VOL_BOLA_ANDANDO * 1000);
     char comando[256];
-    sprintf(comando, "setaudio som_bola.wav volume to %d", vol);
+    sprintf(comando, "setaudio %s volume to %d", ARQ_SOM_BOLA_ANDANDO, vol);
     mciSendString(comando, NULL, 0, NULL);
     if (velocidade > 0.5f) {
-        mciSendString("play som_bola.wav", NULL, 0, NULL);
+        char cmdPlay[256];
+        sprintf(cmdPlay, "play %s", ARQ_SOM_BOLA_ANDANDO);
+        mciSendString(cmdPlay, NULL, 0, NULL);
     } else {
-        mciSendString("pause som_bola.wav", NULL, 0, NULL);
+        char cmdPause[256];
+        sprintf(cmdPause, "pause %s", ARQ_SOM_BOLA_ANDANDO);
+        mciSendString(cmdPause, NULL, 0, NULL);
     }
-    */
 }
 
 void init() {
@@ -192,13 +274,15 @@ void init() {
     glLoadIdentity();
     gluOrtho2D(-TELA_LIMITE_X, TELA_LIMITE_X, -TELA_LIMITE_Y, TELA_LIMITE_Y);
     
-    /*
-    mciSendString("open torcida_ambiente.wav alias ambiente", NULL, 0, NULL);
+    initJogadores();
+
+    char comandoAbre[256];
+    sprintf(comandoAbre, "open %s alias ambiente", ARQ_SOM_AMBIENTE);
+    mciSendString(comandoAbre, NULL, 0, NULL);
     char comando[256];
     sprintf(comando, "setaudio ambiente volume to %d", (int)(VOL_AMBIENTE * 1000));
     mciSendString(comando, NULL, 0, NULL);
     mciSendString("play ambiente repeat", NULL, 0, NULL);
-    */
 }
 
 void desenhaTextoPersonalizado(const char* texto, float x, float y, void* fonte) {
@@ -363,7 +447,7 @@ void desenhaBotaoConfig() {
         glVertex2f(btnX2, btnY2); glVertex2f(btnX1, btnY2);
     glEnd();
 
-    glColor3f(1.0f, 1.0f, 1.0f);
+    glColor3f(0.0f, 0.0f, 0.0f);
     desenhaTextoDireita(TEXTO_OPCOES, btnX2 - 105, btnY1 + (OPCOES_ALTURA/2.0f) - 6.0f, FONTE_TEXTO_PADRAO);
 
     if (menuAberto) {
@@ -404,6 +488,28 @@ void desenhaTodosPlacares() {
     desenhaTempo(TEMPO_POS_X, TEMPO_POS_Y);
     desenhaComandos();
     desenhaBotaoConfig();
+}
+
+void desenhaJogadores() {
+    for(int i = 0; i < 22; i++) {
+        glPushMatrix();
+        glTranslatef(jogadores[i].x, jogadores[i].y, 0.0f);
+        glRotatef(jogadores[i].angle, 0.0f, 0.0f, 1.0f);
+        
+        if (jogadores[i].time == 0) glColor3f(COR_TIME_ESQ_R, COR_TIME_ESQ_G, COR_TIME_ESQ_B);
+        else glColor3f(COR_TIME_DIR_R, COR_TIME_DIR_G, COR_TIME_DIR_B);
+
+        float anim = sin(jogadores[i].animOffset) * 6.0f;
+        desenhaCirculo(anim, 11.0f, 5.0f, 15, 0, 360, PREENCHIDO);
+        desenhaCirculo(-anim, -11.0f, 5.0f, 15, 0, 360, PREENCHIDO);
+        
+        desenhaCirculo(0.0f, 0.0f, 12.0f, 25, 0, 360, PREENCHIDO);
+
+        glColor3f(jogadores[i].skinR, jogadores[i].skinG, jogadores[i].skinB);
+        desenhaCirculo(0.0f, 0.0f, 8.0f, 25, 0, 360, PREENCHIDO);
+
+        glPopMatrix();
+    }
 }
 
 void campo() {
@@ -553,47 +659,95 @@ void liberarInputs(int value) {
     inputsBloqueados = false;
 }
 
+void chuteGoleiroEsquerda(int value) {
+    inputsBloqueados = false;
+    defendendoGolContra = false;
+    bolaX = jogadores[0].x + RAIO_DEFESA_GK + BOLA_RAIO + 5.0f;
+    bolaVX = BOLA_MAX_VEL; bolaVY = 0.0f;
+    tocarSomArquivo(ARQ_SOM_DISPARADA, VOL_DISPARADA);
+}
+
+void chuteGoleiroDireita(int value) {
+    inputsBloqueados = false;
+    defendendoGolContra = false;
+    bolaX = jogadores[11].x - RAIO_DEFESA_GK - BOLA_RAIO - 5.0f;
+    bolaVX = -BOLA_MAX_VEL; bolaVY = 0.0f;
+    tocarSomArquivo(ARQ_SOM_DISPARADA, VOL_DISPARADA);
+}
+
+void resetJogadores(bool isGoal) {
+    for (int i = 0; i < 22; i++) {
+        jogadores[i].x = jogadores[i].homeX;
+        jogadores[i].y = jogadores[i].homeY;
+        jogadores[i].animOffset = 0.0f;
+        jogadores[i].angle = (jogadores[i].time == 0) ? 0.0f : 180.0f;
+        
+        if (!isGoal) {
+            bool isEnemy = (jogadores[i].time == 0 && posseDireita) || (jogadores[i].time == 1 && !posseDireita);
+            if (isEnemy) {
+                float dx = jogadores[i].x - bolaX;
+                float dy = jogadores[i].y - bolaY;
+                float dist = sqrt(dx*dx + dy*dy);
+                if (dist < DISTANCIA_MINIMA_COBRANCA) {
+                    if (dist == 0.0f) { dx = 1.0f; dy = 0.0f; dist = 1.0f; }
+                    jogadores[i].x = bolaX + (dx/dist) * DISTANCIA_MINIMA_COBRANCA;
+                    jogadores[i].y = bolaY + (dy/dist) * DISTANCIA_MINIMA_COBRANCA;
+                }
+            }
+        }
+    }
+}
+
 void resolverSaidaDeBola(int evento) {
+    bool isGoal = false;
     switch (evento) {
         case EVENTO_GOL_ESQ:
             placarDir++;
             bolaX = 0.0f; bolaY = 0.0f;
             progressoChapeu = 0.0f;
             posseDireita = false;
-            tocarSomArquivo("som_gol.wav", VOL_GOL);
-            tocarSomArquivo("som_torcida.wav", VOL_TORCIDA_VIBRA);
+            isGoal = true;
+            tocarSomArquivo(ARQ_SOM_GOL, VOL_GOL);
+            tocarSomArquivo(ARQ_SOM_TORCIDA_VIBRA, VOL_TORCIDA_VIBRA);
             break;
         case EVENTO_GOL_DIR:
             placarEsq++;
             bolaX = 0.0f; bolaY = 0.0f;
             progressoChapeu = 0.0f;
             posseDireita = true;
-            tocarSomArquivo("som_gol.wav", VOL_GOL);
-            tocarSomArquivo("som_torcida.wav", VOL_TORCIDA_VIBRA);
+            isGoal = true;
+            tocarSomArquivo(ARQ_SOM_GOL, VOL_GOL);
+            tocarSomArquivo(ARQ_SOM_TORCIDA_VIBRA, VOL_TORCIDA_VIBRA);
             break;
         case EVENTO_LATERAL_CIMA:
             bolaX = ultimaSaidaX; bolaY = MEIO_L - BOLA_RAIO - 1.0f;
-            tocarSomArquivo("som_apito.wav", VOL_APITO);
+            tocarSomArquivo(ARQ_SOM_APITO, VOL_APITO);
+            esperandoCobranca = true;
             break;
         case EVENTO_LATERAL_BAIXO:
             bolaX = ultimaSaidaX; bolaY = -MEIO_L + BOLA_RAIO + 1.0f;
-            tocarSomArquivo("som_apito.wav", VOL_APITO);
+            tocarSomArquivo(ARQ_SOM_APITO, VOL_APITO);
+            esperandoCobranca = true;
             break;
         case EVENTO_ESCANTEIO_ESQ_CIMA:
             bolaX = -MEIO_C + BOLA_RAIO + 1.0f; bolaY = MEIO_L - BOLA_RAIO - 1.0f;
-            tocarSomArquivo("som_apito.wav", VOL_APITO);
+            tocarSomArquivo(ARQ_SOM_APITO, VOL_APITO);
+            esperandoCobranca = true;
             break;
         case EVENTO_ESCANTEIO_ESQ_BAIXO:
             bolaX = -MEIO_C + BOLA_RAIO + 1.0f; bolaY = -MEIO_L + BOLA_RAIO + 1.0f;
-            tocarSomArquivo("som_apito.wav", VOL_APITO);
+            tocarSomArquivo(ARQ_SOM_APITO, VOL_APITO);
+            esperandoCobranca = true;
             break;
         case EVENTO_ESCANTEIO_DIR_CIMA:
             bolaX = MEIO_C - BOLA_RAIO - 1.0f; bolaY = MEIO_L - BOLA_RAIO - 1.0f;
-            tocarSomArquivo("som_apito.wav", VOL_APITO);
+            tocarSomArquivo(ARQ_SOM_APITO, VOL_APITO);
+            esperandoCobranca = true;
             break;
         case EVENTO_ESCANTEIO_DIR_BAIXO:
             bolaX = MEIO_C - BOLA_RAIO - 1.0f; bolaY = -MEIO_L + BOLA_RAIO + 1.0f;
-            tocarSomArquivo("som_apito.wav", VOL_APITO);
+            tocarSomArquivo(ARQ_SOM_APITO, VOL_APITO);
+            esperandoCobranca = true;
             break;
         case EVENTO_INTERVALO:
             bolaX = 0.0f; bolaY = 0.0f;
@@ -604,7 +758,8 @@ void resolverSaidaDeBola(int evento) {
             segundoTempo = true;
             progressoChapeu = 0.0f;
             posseDireita = !TIME_INICIAL_DIREITA;
-            tocarSomArquivo("som_apito.wav", VOL_APITO);
+            isGoal = true;
+            tocarSomArquivo(ARQ_SOM_APITO, VOL_APITO);
             break;
         case EVENTO_FIM_JOGO:
             placarEsq = 0; placarDir = 0;
@@ -614,13 +769,19 @@ void resolverSaidaDeBola(int evento) {
             gramaInvertida = false;
             progressoChapeu = 0.0f;
             posseDireita = TIME_INICIAL_DIREITA;
-            tocarSomArquivo("som_apito.wav", VOL_APITO);
-            tocarSomArquivo("som_torcida.wav", VOL_TORCIDA_VIBRA);
+            isGoal = true;
+            tocarSomArquivo(ARQ_SOM_APITO, VOL_APITO);
+            tocarSomArquivo(ARQ_SOM_TORCIDA_VIBRA, VOL_TORCIDA_VIBRA);
             break;
         case EVENTO_TOMADA_BOLA:
-            tocarSomArquivo("som_interceptacao.wav", VOL_INTERCEPTACAO);
+            tocarSomArquivo(ARQ_SOM_INTERCEPTACAO, VOL_INTERCEPTACAO);
             break;
     }
+    
+    if (evento != EVENTO_TOMADA_BOLA) {
+        resetJogadores(isGoal);
+    }
+    
     if (evento != EVENTO_FIM_JOGO) {
         bolaVX = 0.0f; 
         bolaVY = 0.0f;
@@ -671,7 +832,7 @@ void atualizaFisica(int value) {
     float velAtual = sqrt(bolaVX * bolaVX + bolaVY * bolaVY);
     
     if (velAnterior < 0.5f && velAtual > 2.0f && !executandoChapeu) {
-        tocarSomArquivo("som_disparada.wav", VOL_DISPARADA);
+        tocarSomArquivo(ARQ_SOM_DISPARADA, VOL_DISPARADA);
     }
     atualizarSomBola(velAtual);
     velAnterior = velAtual;
@@ -680,9 +841,83 @@ void atualizaFisica(int value) {
         bolaVX = (bolaVX / velAtual) * BOLA_MAX_VEL;
         bolaVY = (bolaVY / velAtual) * BOLA_MAX_VEL;
     }
+    
+    if (velAtual > 0.5f) {
+        esperandoCobranca = false;
+    }
 
     bolaX += bolaVX;
     bolaY += bolaVY;
+
+    for (int i = 0; i < 22; i++) {
+        if (!bolaEmJogo) continue;
+        
+        bool isEnemy = (jogadores[i].time == 0 && posseDireita) || (jogadores[i].time == 1 && !posseDireita);
+        if (esperandoCobranca && isEnemy) continue;
+        
+        if (defendendoGolContra && ((!posseDireita && i == 0) || (posseDireita && i == 11))) continue;
+        
+        if (jogadores[i].role == 0) {
+            float targetY = bolaY;
+            if (targetY > GOL_L / 2.0f) targetY = GOL_L / 2.0f;
+            if (targetY < -GOL_L / 2.0f) targetY = -GOL_L / 2.0f;
+            float dy = targetY - jogadores[i].y;
+            if (fabs(dy) > jogadores[i].speed) {
+                jogadores[i].y += (dy > 0 ? jogadores[i].speed : -jogadores[i].speed);
+                jogadores[i].animOffset += 0.2f;
+            } else {
+                jogadores[i].y = targetY;
+                jogadores[i].animOffset = 0.0f;
+            }
+            jogadores[i].angle = (jogadores[i].time == 0) ? 0.0f : 180.0f;
+        } else {
+            float tx = jogadores[i].homeX;
+            float ty = jogadores[i].homeY;
+
+            bool inMyHalf = (jogadores[i].time == 0) ? (bolaX < 0) : (bolaX > 0);
+            bool enemyPossession = (jogadores[i].time == 0) ? posseDireita : !posseDireita;
+
+            if (inMyHalf && enemyPossession && !defendendoGolContra) {
+                tx = bolaX;
+                ty = bolaY;
+            }
+
+            float dx = tx - jogadores[i].x;
+            float dy = ty - jogadores[i].y;
+            float dist = sqrt(dx*dx + dy*dy);
+
+            if (dist > jogadores[i].speed) {
+                jogadores[i].x += (dx/dist) * jogadores[i].speed;
+                jogadores[i].y += (dy/dist) * jogadores[i].speed;
+                jogadores[i].animOffset += 0.2f;
+                jogadores[i].angle = atan2(dy, dx) * 180.0f / PI;
+            } else {
+                jogadores[i].x = tx;
+                jogadores[i].y = ty;
+                jogadores[i].animOffset = 0.0f;
+                if (tx == jogadores[i].homeX && ty == jogadores[i].homeY) {
+                    jogadores[i].angle = (jogadores[i].time == 0) ? 0.0f : 180.0f;
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < 22; i++) {
+        for (int j = i + 1; j < 22; j++) {
+            float dx = jogadores[i].x - jogadores[j].x;
+            float dy = jogadores[i].y - jogadores[j].y;
+            float dist = sqrt(dx*dx + dy*dy);
+            if (dist < 24.0f && dist > 0.001f) {
+                float overlap = (24.0f - dist) / 2.0f;
+                float nx = (dx/dist) * overlap;
+                float ny = (dy/dist) * overlap;
+                jogadores[i].x += nx;
+                jogadores[i].y += ny;
+                jogadores[j].x -= nx;
+                jogadores[j].y -= ny;
+            }
+        }
+    }
 
     if (cronometroRodando) {
         tempoJogoVirtualSegundos += (16.0f / 1000.0f) * (90.0f / tempoPartidaMinutos);
@@ -694,6 +929,25 @@ void atualizaFisica(int value) {
         }
     }
 
+    bool pertoInimigo = false;
+    if (!executandoChapeu) {
+        for(int i = 0; i < 22; i++) {
+            if(jogadores[i].time != (posseDireita ? 1 : 0)) {
+                float dx = bolaX - jogadores[i].x;
+                float dy = bolaY - jogadores[i].y;
+                float dist = sqrt(dx*dx + dy*dy);
+                if (dist < BOLA_RAIO * 8.0f) {
+                    pertoInimigo = true;
+                    if (dist < BOLA_RAIO * 3.0f && !inputsBloqueados && bolaEmJogo && !defendendoGolContra) {
+                        posseDireita = !posseDireita;
+                        resolverSaidaDeBola(EVENTO_TOMADA_BOLA);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     if (executandoChapeu) {
         tempoAtualChapeu += 16.0f / 1000.0f;
         if (tempoAtualChapeu >= DURACAO_CHAPEU_SEC) {
@@ -701,68 +955,93 @@ void atualizaFisica(int value) {
             tempoAtualChapeu = 0.0f;
         }
     } else {
-        if (velAtual > 0.5f && bolaEmJogo && !inputsBloqueados) {
+        if (velAtual > 0.5f && bolaEmJogo && !inputsBloqueados && pertoInimigo) {
             progressoChapeu += (16.0f / 1000.0f) / TEMPO_CHAPEU_SEC;
             if (progressoChapeu > 1.0f) progressoChapeu = 1.0f;
         }
     }
 
-    float px[4] = {-MEIO_C, -MEIO_C, MEIO_C, MEIO_C};
-    float py[4] = {GOL_L / 2.0f, -GOL_L / 2.0f, GOL_L / 2.0f, -GOL_L / 2.0f};
-    for (int i = 0; i < 4; i++) {
-        float dx = bolaX - px[i];
-        float dy = bolaY - py[i];
-        float dist = sqrt(dx * dx + dy * dy);
-        if (dist < BOLA_RAIO) {
-            float nx = dx / dist;
-            float ny = dy / dist;
-            float dot = bolaVX * nx + bolaVY * ny;
-            bolaVX = bolaVX - 2 * dot * nx;
-            bolaVY = bolaVY - 2 * dot * ny;
-            bolaX = px[i] + nx * (BOLA_RAIO + 0.1f);
-            bolaY = py[i] + ny * (BOLA_RAIO + 0.1f);
+    if (!executandoChapeu) {
+        float distGkEsq = sqrt(pow(bolaX - jogadores[0].x, 2) + pow(bolaY - jogadores[0].y, 2));
+        float distGkDir = sqrt(pow(bolaX - jogadores[11].x, 2) + pow(bolaY - jogadores[11].y, 2));
+
+        if (distGkEsq < RAIO_DEFESA_GK && bolaEmJogo && !defendendoGolContra && !posseDireita) {
+            defendendoGolContra = true;
+            inputsBloqueados = true;
+            bolaVX = 0.0f; bolaVY = 0.0f;
+            bolaX = jogadores[0].x + BOLA_RAIO * 2.0f; bolaY = jogadores[0].y;
+            posseDireita = false;
+            tocarSomArquivo(ARQ_SOM_DEFESA, VOL_DEFESA);
+            glutTimerFunc(1500, chuteGoleiroEsquerda, 0);
+        } else if (distGkDir < RAIO_DEFESA_GK && bolaEmJogo && !defendendoGolContra && posseDireita) {
+            defendendoGolContra = true;
+            inputsBloqueados = true;
+            bolaVX = 0.0f; bolaVY = 0.0f;
+            bolaX = jogadores[11].x - BOLA_RAIO * 2.0f; bolaY = jogadores[11].y;
+            posseDireita = true;
+            tocarSomArquivo(ARQ_SOM_DEFESA, VOL_DEFESA);
+            glutTimerFunc(1500, chuteGoleiroDireita, 0);
         }
     }
 
-    if (bolaX < -MEIO_C) {
-        if (bolaY > GOL_L / 2.0f && bolaY - BOLA_RAIO < GOL_L / 2.0f && bolaX > -MEIO_C - GOL_PROF) {
-            bolaY = GOL_L / 2.0f + BOLA_RAIO; bolaVY *= -1;
-        } else if (bolaY < -GOL_L / 2.0f && bolaY + BOLA_RAIO > -GOL_L / 2.0f && bolaX > -MEIO_C - GOL_PROF) {
-            bolaY = -GOL_L / 2.0f - BOLA_RAIO; bolaVY *= -1;
-        } else if (bolaX > -MEIO_C - GOL_PROF - BOLA_RAIO && bolaX < -MEIO_C - GOL_PROF && bolaY > -GOL_L / 2.0f && bolaY < GOL_L / 2.0f) {
-            bolaX = -MEIO_C - GOL_PROF - BOLA_RAIO; bolaVX *= -1;
-        } else if (bolaY < GOL_L / 2.0f && bolaY > -GOL_L / 2.0f) {
-            if (bolaX - BOLA_RAIO < -MEIO_C - GOL_PROF) {
-                bolaX = -MEIO_C - GOL_PROF + BOLA_RAIO; bolaVX = 0.0f; bolaVY = 0.0f;
-            }
-            if (bolaY + BOLA_RAIO > GOL_L / 2.0f) {
-                bolaY = GOL_L / 2.0f - BOLA_RAIO; bolaVX = 0.0f; bolaVY = 0.0f;
-            }
-            if (bolaY - BOLA_RAIO < -GOL_L / 2.0f) {
-                bolaY = -GOL_L / 2.0f + BOLA_RAIO; bolaVX = 0.0f; bolaVY = 0.0f;
+    if (!executandoChapeu) {
+        float px[4] = {-MEIO_C, -MEIO_C, MEIO_C, MEIO_C};
+        float py[4] = {GOL_L / 2.0f, -GOL_L / 2.0f, GOL_L / 2.0f, -GOL_L / 2.0f};
+        for (int i = 0; i < 4; i++) {
+            float dx = bolaX - px[i];
+            float dy = bolaY - py[i];
+            float dist = sqrt(dx * dx + dy * dy);
+            if (dist < BOLA_RAIO) {
+                float nx = dx / dist;
+                float ny = dy / dist;
+                float dot = bolaVX * nx + bolaVY * ny;
+                bolaVX = bolaVX - 2 * dot * nx;
+                bolaVY = bolaVY - 2 * dot * ny;
+                bolaX = px[i] + nx * (BOLA_RAIO + 0.1f);
+                bolaY = py[i] + ny * (BOLA_RAIO + 0.1f);
             }
         }
-    } else if (bolaX > MEIO_C) {
-        if (bolaY > GOL_L / 2.0f && bolaY - BOLA_RAIO < GOL_L / 2.0f && bolaX < MEIO_C + GOL_PROF) {
-            bolaY = GOL_L / 2.0f + BOLA_RAIO; bolaVY *= -1;
-        } else if (bolaY < -GOL_L / 2.0f && bolaY + BOLA_RAIO > -GOL_L / 2.0f && bolaX < MEIO_C + GOL_PROF) {
-            bolaY = -GOL_L / 2.0f - BOLA_RAIO; bolaVY *= -1;
-        } else if (bolaX < MEIO_C + GOL_PROF + BOLA_RAIO && bolaX > MEIO_C + GOL_PROF && bolaY > -GOL_L / 2.0f && bolaY < GOL_L / 2.0f) {
-            bolaX = MEIO_C + GOL_PROF + BOLA_RAIO; bolaVX *= -1;
-        } else if (bolaY < GOL_L / 2.0f && bolaY > -GOL_L / 2.0f) {
-            if (bolaX + BOLA_RAIO > MEIO_C + GOL_PROF) {
-                bolaX = MEIO_C + GOL_PROF - BOLA_RAIO; bolaVX = 0.0f; bolaVY = 0.0f;
+
+        if (bolaX < -MEIO_C) {
+            if (bolaY > GOL_L / 2.0f && bolaY - BOLA_RAIO < GOL_L / 2.0f && bolaX > -MEIO_C - GOL_PROF) {
+                bolaY = GOL_L / 2.0f + BOLA_RAIO; bolaVY *= -1;
+            } else if (bolaY < -GOL_L / 2.0f && bolaY + BOLA_RAIO > -GOL_L / 2.0f && bolaX > -MEIO_C - GOL_PROF) {
+                bolaY = -GOL_L / 2.0f - BOLA_RAIO; bolaVY *= -1;
+            } else if (bolaX > -MEIO_C - GOL_PROF - BOLA_RAIO && bolaX < -MEIO_C - GOL_PROF && bolaY > -GOL_L / 2.0f && bolaY < GOL_L / 2.0f) {
+                bolaX = -MEIO_C - GOL_PROF - BOLA_RAIO; bolaVX *= -1;
+            } else if (bolaY < GOL_L / 2.0f && bolaY > -GOL_L / 2.0f) {
+                if (bolaX - BOLA_RAIO < -MEIO_C - GOL_PROF) {
+                    bolaX = -MEIO_C - GOL_PROF + BOLA_RAIO; bolaVX = 0.0f; bolaVY = 0.0f;
+                }
+                if (bolaY + BOLA_RAIO > GOL_L / 2.0f) {
+                    bolaY = GOL_L / 2.0f - BOLA_RAIO; bolaVX = 0.0f; bolaVY = 0.0f;
+                }
+                if (bolaY - BOLA_RAIO < -GOL_L / 2.0f) {
+                    bolaY = -GOL_L / 2.0f + BOLA_RAIO; bolaVX = 0.0f; bolaVY = 0.0f;
+                }
             }
-            if (bolaY + BOLA_RAIO > GOL_L / 2.0f) {
-                bolaY = GOL_L / 2.0f - BOLA_RAIO; bolaVX = 0.0f; bolaVY = 0.0f;
-            }
-            if (bolaY - BOLA_RAIO < -GOL_L / 2.0f) {
-                bolaY = -GOL_L / 2.0f + BOLA_RAIO; bolaVX = 0.0f; bolaVY = 0.0f;
+        } else if (bolaX > MEIO_C) {
+            if (bolaY > GOL_L / 2.0f && bolaY - BOLA_RAIO < GOL_L / 2.0f && bolaX < MEIO_C + GOL_PROF) {
+                bolaY = GOL_L / 2.0f + BOLA_RAIO; bolaVY *= -1;
+            } else if (bolaY < -GOL_L / 2.0f && bolaY + BOLA_RAIO > -GOL_L / 2.0f && bolaX < MEIO_C + GOL_PROF) {
+                bolaY = -GOL_L / 2.0f - BOLA_RAIO; bolaVY *= -1;
+            } else if (bolaX < MEIO_C + GOL_PROF + BOLA_RAIO && bolaX > MEIO_C + GOL_PROF && bolaY > -GOL_L / 2.0f && bolaY < GOL_L / 2.0f) {
+                bolaX = MEIO_C + GOL_PROF + BOLA_RAIO; bolaVX *= -1;
+            } else if (bolaY < GOL_L / 2.0f && bolaY > -GOL_L / 2.0f) {
+                if (bolaX + BOLA_RAIO > MEIO_C + GOL_PROF) {
+                    bolaX = MEIO_C + GOL_PROF - BOLA_RAIO; bolaVX = 0.0f; bolaVY = 0.0f;
+                }
+                if (bolaY + BOLA_RAIO > GOL_L / 2.0f) {
+                    bolaY = GOL_L / 2.0f - BOLA_RAIO; bolaVX = 0.0f; bolaVY = 0.0f;
+                }
+                if (bolaY - BOLA_RAIO < -GOL_L / 2.0f) {
+                    bolaY = -GOL_L / 2.0f + BOLA_RAIO; bolaVX = 0.0f; bolaVY = 0.0f;
+                }
             }
         }
     }
 
-    if (bolaEmJogo) {
+    if (bolaEmJogo && !defendendoGolContra) {
         if (bolaY - BOLA_RAIO > MEIO_L) {
             iniciarSequenciaSaida(EVENTO_LATERAL_CIMA);
         } else if (bolaY + BOLA_RAIO < -MEIO_L) {
@@ -797,6 +1076,7 @@ void geral() {
     glTranslatef(OFFSET_CAMPO_X, OFFSET_CAMPO_Y, 0.0f);
     
     campo();
+    desenhaJogadores();
     desenhaBola();
     
     glPopMatrix(); 
@@ -834,6 +1114,7 @@ void mouseClick(int button, int state, int x, int y) {
                 cronometroRodando = false; gramaInvertida = false;
                 progressoChapeu = 0.0f;
                 posseDireita = TIME_INICIAL_DIREITA;
+                resetJogadores(true);
             } else if (my >= menuBase + (hItem * 4) && my <= menuBase + (hItem * 5)) {
                 exit(0);
             }
@@ -857,7 +1138,7 @@ void tecladoAperta(unsigned char key, int x, int y) {
                 executandoChapeu = true;
                 progressoChapeu = 0.0f;
                 tempoAtualChapeu = 0.0f;
-                tocarSomArquivo("som_chapeu.wav", VOL_CHAPEU);
+                tocarSomArquivo(ARQ_SOM_CHAPEU, VOL_CHAPEU);
             }
             break;
     }
