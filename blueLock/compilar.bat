@@ -23,7 +23,7 @@ gcc -c -o "%nome%.o" "%arquivo%" -I"C:\MinGW\include"
 if %errorlevel% neq 0 goto erro_comp
 
 echo [2/2] Linkando bibliotecas: %nome%.exe...
-gcc -o "%nome%.exe" "%nome%.o" -L"C:\MinGW\lib" -lfreeglut -lopengl32 -lglu32
+gcc -o "%nome%.exe" "%nome%.o" -L"C:\MinGW\lib" -lfreeglut -lopengl32 -lglu32 -lwinmm
 
 if %errorlevel% neq 0 goto erro_link
 
