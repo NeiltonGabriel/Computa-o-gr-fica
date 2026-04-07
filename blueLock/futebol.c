@@ -190,38 +190,12 @@ bool inputsBloqueados = false;
 bool bolaEmJogo = true;
 float ultimaSaidaX = 0.0f;
 float ultimaSaidaY = 0.0f;
+
 // Constantes para os limites do Botão
 #define BOTAO_X_MIN (TELA_LIMITE_X - 90.0f)
 #define BOTAO_X_MAX (TELA_LIMITE_X - 30.0f)
 #define BOTAO_Y_MIN (TELA_LIMITE_Y - 80.0f)
 #define BOTAO_Y_MAX (TELA_LIMITE_Y - 20.0f)
-
-void desenhaBotaoSair() {
-    // Fundo vermelho escuro
-    glColor3f(0.8f, 0.2f, 0.2f);
-    glRectf(BOTAO_X_MIN, BOTAO_Y_MIN, BOTAO_X_MAX, BOTAO_Y_MAX);
-
-    // Borda branca
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glLineWidth(2.0f);
-    glBegin(GL_LINE_LOOP);
-        glVertex2f(BOTAO_X_MIN, BOTAO_Y_MIN);
-        glVertex2f(BOTAO_X_MAX, BOTAO_Y_MIN);
-        glVertex2f(BOTAO_X_MAX, BOTAO_Y_MAX);
-        glVertex2f(BOTAO_X_MIN, BOTAO_Y_MAX);
-    glEnd();
-
-    // Desenhando o "X" branco no meio do botão
-    glLineWidth(4.0f);
-    glBegin(GL_LINES);
-        glVertex2f(BOTAO_X_MIN + 20, BOTAO_Y_MIN + 15);
-        glVertex2f(BOTAO_X_MAX - 20, BOTAO_Y_MAX - 15);
-        
-        glVertex2f(BOTAO_X_MIN + 20, BOTAO_Y_MAX - 15);
-        glVertex2f(BOTAO_X_MAX - 20, BOTAO_Y_MIN + 15);
-    glEnd();
-    glLineWidth(2.0f); // Reseta a espessura da linha
-}
 
 int tempoOpcoes[3] = {1, 3, 5};
 int tempoPartidaMinutos = 3;
@@ -398,33 +372,33 @@ void desenhaDigito(int numero, float x, float y, float w, float h, float t) {
     }
 }
 
-void desenhaOutdoor(float centro_x, float centro_y, int pontuacao) {
-    glColor3f(0.1f, 0.1f, 0.1f);
-    glRectf(centro_x - PLACAR_LARGURA/2, centro_y - PLACAR_ALTURA/2, 
-            centro_x + PLACAR_LARGURA/2, centro_y + PLACAR_ALTURA/2);
-            
+void desenhaBotaoSair() {
+    // Fundo vermelho escuro
+    glColor3f(0.8f, 0.2f, 0.2f);
+    glRectf(BOTAO_X_MIN, BOTAO_Y_MIN, BOTAO_X_MAX, BOTAO_Y_MAX);
+
+    // Borda branca
     glColor3f(1.0f, 1.0f, 1.0f);
-    glLineWidth(3.0f);
+    glLineWidth(2.0f);
     glBegin(GL_LINE_LOOP);
-        glVertex2f(centro_x - PLACAR_LARGURA/2, centro_y - PLACAR_ALTURA/2);
-        glVertex2f(centro_x + PLACAR_LARGURA/2, centro_y - PLACAR_ALTURA/2);
-        glVertex2f(centro_x + PLACAR_LARGURA/2, centro_y + PLACAR_ALTURA/2);
-        glVertex2f(centro_x - PLACAR_LARGURA/2, centro_y + PLACAR_ALTURA/2);
+        glVertex2f(BOTAO_X_MIN, BOTAO_Y_MIN);
+        glVertex2f(BOTAO_X_MAX, BOTAO_Y_MIN);
+        glVertex2f(BOTAO_X_MAX, BOTAO_Y_MAX);
+        glVertex2f(BOTAO_X_MIN, BOTAO_Y_MAX);
     glEnd();
 
-    float espaco = 20.0f;
-    float y_base = centro_y - (DIGITO_ALTURA / 2.0f);
-    
-    float x_dezena = centro_x - (DIGITO_LARGURA + espaco/2.0f);
-    float x_unidade = centro_x + (espaco/2.0f);
-
-    desenhaDigito(pontuacao / 10, x_dezena, y_base, DIGITO_LARGURA, DIGITO_ALTURA, DIGITO_ESPESSURA);
-    desenhaDigito(pontuacao % 10, x_unidade, y_base, DIGITO_LARGURA, DIGITO_ALTURA, DIGITO_ESPESSURA);
+    // Desenhando o "X" branco no meio do botão
+    glLineWidth(4.0f);
+    glBegin(GL_LINES);
+        glVertex2f(BOTAO_X_MIN + 20, BOTAO_Y_MIN + 15);
+        glVertex2f(BOTAO_X_MAX - 20, BOTAO_Y_MAX - 15);
+        
+        glVertex2f(BOTAO_X_MIN + 20, BOTAO_Y_MAX - 15);
+        glVertex2f(BOTAO_X_MAX - 20, BOTAO_Y_MIN + 15);
+    glEnd();
+    glLineWidth(2.0f); // Reseta a espessura da linha
 }
 
-<<<<<<< HEAD
-/*void desenhaTodosPlacares() {
-=======
 void desenhaTempo(float centro_x, float centro_y) {
     glColor3f(0.8f, 0.1f, 0.1f);
     glRectf(centro_x - TEMPO_LARGURA/2.0f, centro_y - TEMPO_ALTURA/2.0f, centro_x + TEMPO_LARGURA/2.0f, centro_y + TEMPO_ALTURA/2.0f);
@@ -513,22 +487,13 @@ void desenhaBotaoConfig() {
     }
 }
 
-void desenhaTodosPlacares() {
->>>>>>> origin/mecanica
-    float x_outdoor_esq = -TELA_LIMITE_X + (PLACAR_LARGURA / 2.0f) + 20.0f;
-    desenhaOutdoor(x_outdoor_esq, PLACAR_POS_Y, placarEsq);
-
-    float x_outdoor_dir = TELA_LIMITE_X - (PLACAR_LARGURA / 2.0f) - 20.0f;
-    desenhaOutdoor(x_outdoor_dir, PLACAR_POS_Y, placarDir);
-<<<<<<< HEAD
-}*/
 void desenhaPlacarCentral() {
     float centro_x = 0.0f; 
     float centro_y = TELA_LIMITE_Y - 120.0f; 
     float largura = 400.0f;
     float altura = 120.0f;
 
-    // NOVO: Estrutura da cabine que desce do teto e tampa a arquibancada
+    // Estrutura da cabine que desce do teto e tampa a arquibancada
     glColor3f(0.12f, 0.12f, 0.12f); 
     glRectf(centro_x - largura/2 - 30.0f, centro_y - altura/2 - 20.0f, 
             centro_x + largura/2 + 30.0f, TELA_LIMITE_Y);
@@ -543,7 +508,6 @@ void desenhaPlacarCentral() {
         glVertex2f(centro_x - largura/2 - 30.0f, TELA_LIMITE_Y);
     glEnd();
 
-    // A partir daqui é o placar que você já tinha:
     // Fundo do placar unificado
     glColor3f(0.05f, 0.05f, 0.05f);
     glRectf(centro_x - largura/2, centro_y - altura/2, 
@@ -575,25 +539,24 @@ void desenhaPlacarCentral() {
     desenhaDigito(placarDir / 10, x_dir_dez, y_base, dig_w, dig_h, dig_t);
     desenhaDigito(placarDir % 10, x_dir_uni, y_base, dig_w, dig_h, dig_t);
 }
+
 void desenhaArquibancada() {
     float margem = 4.0f * ESCALA;
     float larguraDegrau = 3.5f * ESCALA;
-    
-    // Deixei 10 para a arquibancada acabar mais cedo e sobrar o cinza liso no fundo
     int numDegraus = 10; 
 
     float limiteGeralX = MEIO_C + margem + (numDegraus * larguraDegrau);
     float limiteGeralY = MEIO_L + margem + (numDegraus * larguraDegrau);
 
-    // 1. Fundo base gigantão (A área cinza escuro onde NÃO terá NPCs)
+    // Fundo base gigantão
     glColor3f(0.2f, 0.2f, 0.2f);
     glRectf(-TELA_LIMITE_X * 2, -TELA_LIMITE_Y * 2, TELA_LIMITE_X * 2, TELA_LIMITE_Y * 2);
 
-    // 2. Margem do gramado (pista ao redor)
+    // Margem do gramado
     glColor3f(0.25f, 0.35f, 0.25f);
     glRectf(-limiteGeralX, -limiteGeralY, limiteGeralX, limiteGeralY);
 
-    // 3. Desenha os degraus
+    // Desenha os degraus
     for (int i = numDegraus; i > 0; i--) {
         float tomCinza = 0.35f + (i * 0.025f);
         glColor3f(tomCinza, tomCinza, tomCinza);
@@ -601,7 +564,6 @@ void desenhaArquibancada() {
         float limiteX = MEIO_C + margem + (i * larguraDegrau);
         float limiteY = MEIO_L + margem + (i * larguraDegrau);
 
-        // Preenchimento do degrau
         glBegin(GL_QUADS);
             glVertex2f(-limiteX, -limiteY);
             glVertex2f( limiteX, -limiteY);
@@ -609,7 +571,6 @@ void desenhaArquibancada() {
             glVertex2f(-limiteX,  limiteY);
         glEnd();
 
-        // Linha divisória fina para marcar bem o degrau
         glColor3f(0.15f, 0.15f, 0.15f);
         glLineWidth(1.0f);
         glBegin(GL_LINE_LOOP);
@@ -620,8 +581,6 @@ void desenhaArquibancada() {
         glEnd();
     }
 
-    // 4. Desenha as escadas (linhas grossas)
-    // Aqui entra o recuo para a linha não vazar a borda por causa da espessura dela
     float recuo = 2.0f; 
     float calcX = limiteGeralX - recuo;
     float calcY = limiteGeralY - recuo;
@@ -629,24 +588,17 @@ void desenhaArquibancada() {
     glColor3f(0.1f, 0.1f, 0.1f);
     glLineWidth(4.0f);
     glBegin(GL_LINES);
-        // Retas
         glVertex2f(0.0f, MEIO_L + margem);     glVertex2f(0.0f, calcY);
         glVertex2f(0.0f, -MEIO_L - margem);    glVertex2f(0.0f, -calcY);
         glVertex2f(MEIO_C + margem, 0.0f);     glVertex2f(calcX, 0.0f);
         glVertex2f(-MEIO_C - margem, 0.0f);    glVertex2f(-calcX, 0.0f);
         
-        // Diagonais
         glVertex2f(MEIO_C + margem, MEIO_L + margem);   glVertex2f(calcX, calcY);
         glVertex2f(-MEIO_C - margem, MEIO_L + margem);  glVertex2f(-calcX, calcY);
         glVertex2f(MEIO_C + margem, -MEIO_L - margem);  glVertex2f(calcX, -calcY);
         glVertex2f(-MEIO_C - margem, -MEIO_L - margem); glVertex2f(-calcX, -calcY);
     glEnd();
-    glLineWidth(2.0f); // Reseta a linha
-=======
-    
-    desenhaTempo(TEMPO_POS_X, TEMPO_POS_Y);
-    desenhaComandos();
-    desenhaBotaoConfig();
+    glLineWidth(2.0f); 
 }
 
 void desenhaJogadores() {
@@ -669,7 +621,6 @@ void desenhaJogadores() {
 
         glPopMatrix();
     }
->>>>>>> origin/mecanica
 }
 
 void campo() {
@@ -1233,7 +1184,6 @@ void geral() {
     glPushMatrix();
     glTranslatef(OFFSET_CAMPO_X, OFFSET_CAMPO_Y, 0.0f);
     
-    //desenhaTodosPlacares();
     desenhaArquibancada();
     campo();
     desenhaJogadores();
@@ -1241,34 +1191,22 @@ void geral() {
     
     glPopMatrix(); 
 
+    // Renderiza Interface por cima de tudo
     desenhaPlacarCentral();
     desenhaBotaoSair();
+    desenhaTempo(TEMPO_POS_X, TEMPO_POS_Y);
+    desenhaComandos();
+    desenhaBotaoConfig();
 
-    
     glutSwapBuffers(); 
 }
 
-<<<<<<< HEAD
-void cliqueMouse(int button, int state, int x, int y) { //adição nova (Jadiel) função de sair do programa.
-    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        // Pega as dimensões atuais da janela
-        int larguraJanela = glutGet(GLUT_WINDOW_WIDTH);
-        int alturaJanela = glutGet(GLUT_WINDOW_HEIGHT);
-
-        // Converte as coordenadas da tela (janela) pro sistema Ortho2D
-        float orthoX = ((float)x / larguraJanela) * (2 * TELA_LIMITE_X) - TELA_LIMITE_X;
-        float orthoY = TELA_LIMITE_Y - ((float)y / alturaJanela) * (2 * TELA_LIMITE_Y);
-
-        // Verifica se a conversão do clique está dentro da área do botão
-        if (orthoX >= BOTAO_X_MIN && orthoX <= BOTAO_X_MAX &&
-            orthoY >= BOTAO_Y_MIN && orthoY <= BOTAO_Y_MAX) {
-            exit(0); // Fecha o jogo com sucesso
-=======
 void mouseClick(int button, int state, int x, int y) {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
         float mx = ((float)x / glutGet(GLUT_WINDOW_WIDTH)) * (2.0f * TELA_LIMITE_X) - TELA_LIMITE_X;
         float my = ((1.0f - (float)y / glutGet(GLUT_WINDOW_HEIGHT))) * (2.0f * TELA_LIMITE_Y) - TELA_LIMITE_Y;
 
+        // Trata clique do menu de Opções (origin/mecanica)
         float btnX1 = OPCOES_POS_X;
         float btnX2 = OPCOES_POS_X + OPCOES_LARGURA;
         float btnY1 = OPCOES_POS_Y;
@@ -1299,7 +1237,11 @@ void mouseClick(int button, int state, int x, int y) {
                 exit(0);
             }
             menuAberto = false;
->>>>>>> origin/mecanica
+        }
+
+        // Trata clique do botão X vermelho (Sair - HEAD)
+        if (mx >= BOTAO_X_MIN && mx <= BOTAO_X_MAX && my >= BOTAO_Y_MIN && my <= BOTAO_Y_MAX) {
+            exit(0);
         }
     }
 }
@@ -1370,11 +1312,7 @@ int main(int argc, char** argv) {
     glutKeyboardUpFunc(tecladoSolta);
     glutSpecialFunc(teclasEspeciaisAperta);
     glutSpecialUpFunc(teclasEspeciaisSolta);
-<<<<<<< HEAD
-    glutMouseFunc(cliqueMouse);
-=======
     glutMouseFunc(mouseClick);
->>>>>>> origin/mecanica
     
     glutTimerFunc(16, atualizaFisica, 0);
 
