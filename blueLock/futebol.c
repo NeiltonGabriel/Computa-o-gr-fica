@@ -40,10 +40,10 @@ float VOL_CHAPEU = 0.9f;
 float VOL_TORCIDA_VIBRA = 1.0f;
 float VOL_APITO = 1.0f;
 
-const char* TEX_TORCIDA_TIME_A[3] = {"torcidaA_1.png", "torcidaA_2.png", "torcidaA_3.png"};
-const char* TEX_TORCIDA_TIME_B[3] = {"torcidaB_1.png", "torcidaB_2.png", "torcidaB_3.png"};
-GLuint idTexturasA[3];
-GLuint idTexturasB[3];
+const char* TEX_TORCIDA[6] = {"torcidaA_1.png", "torcidaA_2.png", "torcidaA_3.png", "torcidaA_4.png", "torcidaA_5.png", "torcidaA_6.png"};
+GLuint idTexturas[6];
+
+float ALTURA_DEFESA_GK = 0.75f;
 
 const float COR_TIME_ESQ_R = 0.2f;
 const float COR_TIME_ESQ_G = 0.2f;
@@ -224,9 +224,9 @@ bool jogoIniciado = false;
 float tempoEsperaIA = 0.0f;
 
 void initJogadores() {
-    float sX[11] = { -MEIO_C + 20.0f, -MEIO_C + 180.0f, -MEIO_C + 180.0f, -MEIO_C + 180.0f, -MEIO_C + 180.0f, -MEIO_C + 350.0f, -MEIO_C + 350.0f, -MEIO_C + 350.0f, -MEIO_C + 350.0f, -80.0f, -80.0f };
-    float sY[11] = { 0.0f, -250.0f, -80.0f, 80.0f, 250.0f, -250.0f, -80.0f, 80.0f, 250.0f, -100.0f, 100.0f };
-    int sRole[11] = { 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3 };
+    float sX[11] = { -MEIO_C + 20.0f, -MEIO_C + 150.0f, -MEIO_C + 150.0f, -MEIO_C + 150.0f, -MEIO_C + 150.0f, -MEIO_C + 320.0f, -MEIO_C + 320.0f, -MEIO_C + 320.0f, -100.0f, -100.0f, -100.0f };
+    float sY[11] = { 0.0f, -220.0f, -75.0f, 75.0f, 220.0f, -180.0f, 0.0f, 180.0f, -180.0f, 0.0f, 180.0f };
+    int sRole[11] = { 0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3 };
 
     for(int i = 0; i < 11; i++) {
         jogadores[i].id = i;
@@ -311,12 +311,9 @@ GLuint carregarTextura(const char* arquivo) {
 void init() {
     glClearColor(COR_FUNDO_R, COR_FUNDO_G, COR_FUNDO_B, 1.0f); 
     glEnable(GL_TEXTURE_2D);
-    idTexturasA[0] = carregarTextura(TEX_TORCIDA_TIME_A[0]);
-    idTexturasA[1] = carregarTextura(TEX_TORCIDA_TIME_A[1]);
-    idTexturasA[2] = carregarTextura(TEX_TORCIDA_TIME_A[2]);
-    idTexturasB[0] = carregarTextura(TEX_TORCIDA_TIME_B[0]);
-    idTexturasB[1] = carregarTextura(TEX_TORCIDA_TIME_B[1]);
-    idTexturasB[2] = carregarTextura(TEX_TORCIDA_TIME_B[2]);
+    for (int i = 0; i < 6; i++) {
+        idTexturas[i] = carregarTextura(TEX_TORCIDA[i]);
+    }
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluOrtho2D(-TELA_LIMITE_X, TELA_LIMITE_X, -TELA_LIMITE_Y, TELA_LIMITE_Y);
@@ -641,13 +638,16 @@ void desenhaArquibancada() {
     glEnd();
     glLineWidth(2.0f);
 
-    int frameAnimacao = 0;
+    int frameEsq = 0;
+    int frameDir = 3;
     if (torcidaVibrando) {
-        frameAnimacao = ((glutGet(GLUT_ELAPSED_TIME) / 150) % 2) + 1; 
+        int animCycle = ((glutGet(GLUT_ELAPSED_TIME) / 150) % 2); 
+        frameEsq = 1 + animCycle;
+        frameDir = 4 + animCycle;
     }
 
-    GLuint texEsq = gramaInvertida ? idTexturasB[frameAnimacao] : idTexturasA[frameAnimacao];
-    GLuint texDir = gramaInvertida ? idTexturasA[frameAnimacao] : idTexturasB[frameAnimacao];
+    GLuint texEsq = idTexturas[frameEsq];
+    GLuint texDir = idTexturas[frameDir];
 
     glColor3f(1.0f, 1.0f, 1.0f);
 
@@ -906,34 +906,37 @@ void resolverSaidaDeBola(int evento) {
         case EVENTO_LATERAL_CIMA:
             bolaX = ultimaSaidaX; bolaY = MEIO_L - BOLA_RAIO - 1.0f;
             esperandoCobranca = true;
+            posseDireita = !posseDireita;
             break;
         case EVENTO_LATERAL_BAIXO:
             bolaX = ultimaSaidaX; bolaY = -MEIO_L + BOLA_RAIO + 1.0f;
             esperandoCobranca = true;
+            posseDireita = !posseDireita;
             break;
         case EVENTO_ESCANTEIO_ESQ_CIMA:
             bolaX = -MEIO_C + BOLA_RAIO + 1.0f; bolaY = MEIO_L - BOLA_RAIO - 1.0f;
             esperandoCobranca = true;
+            posseDireita = !posseDireita;
             break;
         case EVENTO_ESCANTEIO_ESQ_BAIXO:
             bolaX = -MEIO_C + BOLA_RAIO + 1.0f; bolaY = -MEIO_L + BOLA_RAIO + 1.0f;
             esperandoCobranca = true;
+            posseDireita = !posseDireita;
             break;
         case EVENTO_ESCANTEIO_DIR_CIMA:
             bolaX = MEIO_C - BOLA_RAIO - 1.0f; bolaY = MEIO_L - BOLA_RAIO - 1.0f;
             esperandoCobranca = true;
+            posseDireita = !posseDireita;
             break;
         case EVENTO_ESCANTEIO_DIR_BAIXO:
             bolaX = MEIO_C - BOLA_RAIO - 1.0f; bolaY = -MEIO_L + BOLA_RAIO + 1.0f;
             esperandoCobranca = true;
+            posseDireita = !posseDireita;
             break;
         case EVENTO_INTERVALO:
             bolaX = 0.0f; bolaY = 0.0f;
             gramaInvertida = !gramaInvertida;
-            int temp = placarEsq;
             placarEsq = placarDir;
-            placarDir = temp;
-            segundoTempo = true;
             progressoChapeu = 0.0f;
             posseDireita = !TIME_INICIAL_DIREITA;
             isGoal = true;
@@ -1074,7 +1077,11 @@ void atualizaFisica(int value) {
             float ty = jogadores[i].homeY;
 
             if (isEnemy && !defendendoGolContra) {
-                if (i == closestDefId && tempoEsperaIA <= 0.0f) {
+                bool bolaForaAlcance = (posseDireita && bolaX > 0.0f) || (!posseDireita && bolaX < 0.0f);
+                if (bolaForaAlcance) {
+                    tx = jogadores[i].homeX;
+                    ty = jogadores[i].homeY;
+                } else if (i == closestDefId && tempoEsperaIA <= 0.0f) {
                     tx = bolaX;
                     ty = bolaY;
                 } else {
@@ -1184,12 +1191,21 @@ void atualizaFisica(int value) {
             if (progressoChapeu > 1.0f) progressoChapeu = 1.0f;
         }
     }
+    
+    bool gkPodeDefender = true;
+    if (executandoChapeu) {
+        float alturaAtual = sin((tempoAtualChapeu / DURACAO_CHAPEU_SEC) * PI);
+        if (alturaAtual > ALTURA_DEFESA_GK) {
+            gkPodeDefender = false;
+        }
+    }
 
-    if (!executandoChapeu) {
+    if (gkPodeDefender) {
         float distGkEsq = sqrt(pow(bolaX - jogadores[0].x, 2) + pow(bolaY - jogadores[0].y, 2));
         float distGkDir = sqrt(pow(bolaX - jogadores[11].x, 2) + pow(bolaY - jogadores[11].y, 2));
 
         if (distGkEsq < RAIO_DEFESA_GK && bolaEmJogo && !defendendoGolContra && !posseDireita) {
+            if (executandoChapeu) { executandoChapeu = false; progressoChapeu = 0.0f; }
             defendendoGolContra = true;
             inputsBloqueados = true;
             bolaVX = 0.0f; bolaVY = 0.0f;
@@ -1198,6 +1214,7 @@ void atualizaFisica(int value) {
             tocarSomArquivo(ARQ_SOM_DEFESA, VOL_DEFESA);
             glutTimerFunc(1500, chuteGoleiroEsquerda, 0);
         } else if (distGkDir < RAIO_DEFESA_GK && bolaEmJogo && !defendendoGolContra && posseDireita) {
+            if (executandoChapeu) { executandoChapeu = false; progressoChapeu = 0.0f; }
             defendendoGolContra = true;
             inputsBloqueados = true;
             bolaVX = 0.0f; bolaVY = 0.0f;
