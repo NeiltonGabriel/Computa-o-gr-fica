@@ -15,6 +15,7 @@
 #define FONTE_TEXTO_PADRAO GLUT_BITMAP_HELVETICA_18
 #define FONTE_TEXTO_GRANDE GLUT_BITMAP_TIMES_ROMAN_24
 
+// Fator de escala para controle da velocidade do jogo
 float MULTIPLICADOR_GERAL = 0.65f;
 
 const char* ARQ_SOM_AMBIENTE = "ambiente.wav";
@@ -22,28 +23,21 @@ const char* ARQ_SOM_GOL = "gol.wav";
 const char* ARQ_SOM_INTERCEPTACAO = "interceptacao.wav";
 const char* ARQ_SOM_DEFESA = "defesa.wav";
 const char* ARQ_SOM_DISPARADA = "disparada.wav";
-const char* ARQ_SOM_BOLA_ANDANDO = "bola_andando.wav";
 const char* ARQ_SOM_CHAPEU = "chapeu.wav";
 const char* ARQ_SOM_TORCIDA_VIBRA = "torcida.wav";
 const char* ARQ_SOM_APITO = "apito.wav";
 
-bool somBolaTocando = false;
-int ultimoVolumeBola = -1;
-
-float VOL_AMBIENTE = 0.5f;
+float VOL_AMBIENTE = 0.8f;
 float VOL_GOL = 1.0f;
 float VOL_INTERCEPTACAO = 0.8f;
 float VOL_DEFESA = 0.8f;
 float VOL_DISPARADA = 0.7f;
-float VOL_BOLA_ANDANDO = 0.4f;
 float VOL_CHAPEU = 0.9f;
 float VOL_TORCIDA_VIBRA = 1.0f;
 float VOL_APITO = 1.0f;
 
 const char* TEX_TORCIDA[6] = {"torcidaA_1.png", "torcidaA_2.png", "torcidaA_3.png", "torcidaA_4.png", "torcidaA_5.png", "torcidaA_6.png"};
 GLuint idTexturas[6];
-
-float ALTURA_DEFESA_GK = 0.75f;
 
 const float COR_TIME_ESQ_R = 0.2f;
 const float COR_TIME_ESQ_G = 0.2f;
@@ -121,6 +115,7 @@ const float GRAMA_ESCURA_R = 0.100f;
 const float GRAMA_ESCURA_G = 0.450f;
 const float GRAMA_ESCURA_B = 0.100f;
 
+// Escala de medidas oficiais do futebol
 #define ESCALA 13.0f
 #define CAMPO_C (105.0f * ESCALA)
 #define CAMPO_L (68.0f * ESCALA)
@@ -135,7 +130,9 @@ const float GOL_PROF = 2.4f * ESCALA;
 const float MARCA_PENALTI = 11.0f * ESCALA;
 const float RAIO_ESCANTEIO = 2.0f * ESCALA;
 
+// Raio da defesa garantida do goleiro
 const float RAIO_DEFESA_GK = 47.5f;
+// Distancia que adversarios devem manter em recomeços de jogo
 const float DISTANCIA_MINIMA_COBRANCA = 39.0f;
 
 const float RAIO_PONTO_CENTRAL = 0.35f * ESCALA;
@@ -198,6 +195,7 @@ bool teclaW = false, teclaA = false, teclaS = false, teclaD = false;
 bool teclaI = false, teclaJ = false, teclaK = false, teclaL = false;
 bool teclaCima = false, teclaBaixo = false, teclaEsq = false, teclaDir = false;
 
+// Bloqueia comandos do jogador durante saidas ou eventos
 bool inputsBloqueados = false;
 bool bolaEmJogo = true;
 float ultimaSaidaX = 0.0f;
@@ -218,12 +216,15 @@ bool fimDeJogo = false;
 bool gramaInvertida = false;
 bool posseDireita = TIME_INICIAL_DIREITA;
 bool defendendoGolContra = false;
+// Restringe a IA adversaria de aproximar durante cobranças
 bool esperandoCobranca = false;
 bool torcidaVibrando = false;
 bool jogoIniciado = false;
+// Delay forcado ao roubar a bola
 float tempoEsperaIA = 0.0f;
 
-void initJogadores() {
+// Instancia as duas equipes com posicoes e atributos fisicos definidos
+void initJogadores() { // 4-3-3
     float sX[11] = { -MEIO_C + 20.0f, -MEIO_C + 150.0f, -MEIO_C + 150.0f, -MEIO_C + 150.0f, -MEIO_C + 150.0f, -MEIO_C + 320.0f, -MEIO_C + 320.0f, -MEIO_C + 320.0f, -100.0f, -100.0f, -100.0f };
     float sY[11] = { 0.0f, -220.0f, -75.0f, 75.0f, 220.0f, -180.0f, 0.0f, 180.0f, -180.0f, 0.0f, 180.0f };
     int sRole[11] = { 0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3 };
@@ -236,8 +237,11 @@ void initJogadores() {
         jogadores[i].x = sX[i];
         jogadores[i].y = sY[i];
         jogadores[i].role = sRole[i];
+        
         float baseSpeed = ((sRole[i]==0)?VEL_GK:(sRole[i]==1)?VEL_DEF:(sRole[i]==2)?VEL_MID:VEL_ATK) * MULTIPLICADOR_GERAL;
         jogadores[i].speed = baseSpeed + (i * 0.05f * MULTIPLICADOR_GERAL);
+        
+        // Atribuicao de tons de pele
         int s = i % 3;
         jogadores[i].skinR = s==0?PELE_1_R:(s==1?PELE_2_R:PELE_3_R);
         jogadores[i].skinG = s==0?PELE_1_G:(s==1?PELE_2_G:PELE_3_G);
@@ -245,6 +249,7 @@ void initJogadores() {
         jogadores[i].animOffset = (float)i;
         jogadores[i].angle = 0.0f;
 
+        // Espelhamento para criar time adversario
         int j = i + 11;
         jogadores[j].id = j;
         jogadores[j].time = 1;
@@ -253,8 +258,10 @@ void initJogadores() {
         jogadores[j].x = -sX[i];
         jogadores[j].y = sY[i];
         jogadores[j].role = sRole[i];
+        
         baseSpeed = ((sRole[i]==0)?VEL_GK:(sRole[i]==1)?VEL_DEF:(sRole[i]==2)?VEL_MID:VEL_ATK) * MULTIPLICADOR_GERAL;
         jogadores[j].speed = baseSpeed + (j * 0.05f * MULTIPLICADOR_GERAL);
+        
         s = j % 3;
         jogadores[j].skinR = s==0?PELE_1_R:(s==1?PELE_2_R:PELE_3_R);
         jogadores[j].skinG = s==0?PELE_1_G:(s==1?PELE_2_G:PELE_3_G);
@@ -264,6 +271,7 @@ void initJogadores() {
     }
 }
 
+// Reproduz sons via MCI
 void tocarSomArquivo(const char* arquivo, float volume) {
     char comando[256];
     sprintf(comando, "setaudio %s volume to %d", arquivo, (int)(volume * 1000));
@@ -272,21 +280,7 @@ void tocarSomArquivo(const char* arquivo, float volume) {
     mciSendString(comando, NULL, 0, NULL);
 }
 
-void atualizarSomBola(float velocidade) {
-    if (velocidade > 0.5f) {
-        if (!somBolaTocando) {
-            mciSendString("play bola_andando repeat", NULL, 0, NULL);
-            somBolaTocando = true;
-        }
-    } else {
-        if (somBolaTocando) {
-            mciSendString("stop bola_andando", NULL, 0, NULL);
-            mciSendString("seek bola_andando to start", NULL, 0, NULL);
-            somBolaTocando = false;
-        }
-    }
-}
-
+// Carrega imagens via stb_image
 GLuint carregarTextura(const char* arquivo) {
     GLuint texturaID;
     glGenTextures(1, &texturaID);
@@ -308,6 +302,15 @@ GLuint carregarTextura(const char* arquivo) {
     return texturaID;
 }
 
+// Inicia som de fundo
+void initAudioSistema() {
+    char comando[256];
+    sprintf(comando, "setaudio %s volume to %d", ARQ_SOM_AMBIENTE, (int)(VOL_AMBIENTE * 1000));
+    mciSendString(comando, NULL, 0, NULL);
+    sprintf(comando, "play %s from 0", ARQ_SOM_AMBIENTE);
+    mciSendString(comando, NULL, 0, NULL);
+}
+
 void init() {
     glClearColor(COR_FUNDO_R, COR_FUNDO_G, COR_FUNDO_B, 1.0f); 
     glEnable(GL_TEXTURE_2D);
@@ -319,24 +322,7 @@ void init() {
     gluOrtho2D(-TELA_LIMITE_X, TELA_LIMITE_X, -TELA_LIMITE_Y, TELA_LIMITE_Y);
     
     initJogadores();
-
-    mciSendString("close ambiente", NULL, 0, NULL);
-    mciSendString("close bola_andando", NULL, 0, NULL);
-
-    char comandoAbre[256];
-    sprintf(comandoAbre, "open %s alias ambiente", ARQ_SOM_AMBIENTE);
-    mciSendString(comandoAbre, NULL, 0, NULL);
-    char comando[256];
-    sprintf(comando, "setaudio ambiente volume to %d", (int)(VOL_AMBIENTE * 1000));
-    mciSendString(comando, NULL, 0, NULL);
-    mciSendString("play ambiente repeat", NULL, 0, NULL);
-
-    char comandoBolaAbre[256];
-    sprintf(comandoBolaAbre, "open %s alias bola_andando", ARQ_SOM_BOLA_ANDANDO);
-    mciSendString(comandoBolaAbre, NULL, 0, NULL);
-    char comandoBolaVol[256];
-    sprintf(comandoBolaVol, "setaudio bola_andando volume to %d", (int)(VOL_BOLA_ANDANDO * 1000));
-    mciSendString(comandoBolaVol, NULL, 0, NULL);
+    initAudioSistema();
 }
 
 void desenhaTextoPersonalizado(const char* texto, float x, float y, void* fonte) {
@@ -346,6 +332,7 @@ void desenhaTextoPersonalizado(const char* texto, float x, float y, void* fonte)
     }
 }
 
+// Texto na interface
 void desenhaTextoDireita(const char* texto, float limite_x, float y, void* fonte) {
     float width = 0;
     for (int i = 0; i < strlen(texto); i++) {
@@ -357,6 +344,7 @@ void desenhaTextoDireita(const char* texto, float limite_x, float y, void* fonte
     }
 }
 
+// Desenha circulo (solido ou em borda)
 void desenhaCirculo(float x_centro, float y_centro, float raio, int segmentos, float angulo_inicio, float angulo_fim, int caminho) {
     if (caminho == BORDA) {
         glBegin(GL_LINE_STRIP);
@@ -395,6 +383,7 @@ void desenhaRede(float x_min, float x_max, float y_min, float y_max) {
     glLineWidth(2.0f);
 }
 
+// Monta partes independentes de um display de sete segmentos
 void desenhaSegmento(int segmento, float x, float y, float w, float h, float t) {
     glBegin(GL_POLYGON);
     switch (segmento) {
@@ -409,6 +398,7 @@ void desenhaSegmento(int segmento, float x, float y, float w, float h, float t) 
     glEnd();
 }
 
+// Relaciona numeros (0-9) com o dicionario de segmentos para renderizar placares
 void desenhaDigito(int numero, float x, float y, float w, float h, float t) {
     int segmentos[10][7] = {
         {1,1,1,1,1,1,0}, {0,1,1,0,0,0,0}, {1,1,0,1,1,0,1}, {1,1,1,1,0,0,1}, {0,1,1,0,0,1,1}, 
@@ -457,6 +447,7 @@ void desenhaTempo(float centro_x, float centro_y) {
         glVertex2f(centro_x - TEMPO_LARGURA/2.0f, centro_y + TEMPO_ALTURA/2.0f);
     glEnd();
 
+    // Transforma tempo continuo virtual na exibicao MM:SS
     int min = (int)tempoJogoVirtualSegundos / 60;
     int sec = (int)tempoJogoVirtualSegundos % 60;
     char tempoStr[32];
@@ -504,6 +495,7 @@ void desenhaBotaoConfig() {
     glColor3f(0.0f, 0.0f, 0.0f);
     desenhaTextoDireita(TEXTO_OPCOES, btnX2 - 105, btnY1 + (OPCOES_ALTURA/2.0f) - 6.0f, FONTE_TEXTO_PADRAO);
 
+    // Se as configuracoes forem ativadas, renderiza o dropdown
     if (menuAberto) {
         float menuBase = btnY2 + 10.0f;
         float hItem = 42.0f;
@@ -581,6 +573,7 @@ void desenhaPlacarCentral() {
     desenhaDigito(placarDir % 10, x_dir_uni, y_base, dig_w, dig_h, dig_t);
 }
 
+// Renderiza fundo cinza das arquibancadas e a animacao da torcida
 void desenhaArquibancada() {
     float margem = 4.0f * ESCALA;
     float larguraDegrau = 3.5f * ESCALA;
@@ -638,6 +631,7 @@ void desenhaArquibancada() {
     glEnd();
     glLineWidth(2.0f);
 
+    // Oscila texturas para simular movimento
     int frameEsq = 0;
     int frameDir = 3;
     if (torcidaVibrando) {
@@ -685,6 +679,7 @@ void desenhaJogadores() {
         if (jogadores[i].time == 0) glColor3f(COR_TIME_ESQ_R, COR_TIME_ESQ_G, COR_TIME_ESQ_B);
         else glColor3f(COR_TIME_DIR_R, COR_TIME_DIR_G, COR_TIME_DIR_B);
 
+        // Movimentacao dos jogadores
         float anim = sin(jogadores[i].animOffset) * 6.0f;
         desenhaCirculo(anim, 11.0f, 5.0f, 15, 0, 360, PREENCHIDO);
         desenhaCirculo(-anim, -11.0f, 5.0f, 15, 0, 360, PREENCHIDO);
@@ -701,6 +696,7 @@ void desenhaJogadores() {
 void campo_chao() {
     float largura_faixa = CAMPO_C / QTD_FAIXAS_GRAMA;
     
+    // Altera cores formando as faixas da grama
     for (int i = 0; i < QTD_FAIXAS_GRAMA; i++) {
         if ((i % 2 == 0 && !gramaInvertida) || (i % 2 != 0 && gramaInvertida)) {
             glColor3f(GRAMA_CLARA_R, GRAMA_CLARA_G, GRAMA_CLARA_B);
@@ -793,6 +789,7 @@ void desenhaBola() {
         escalaChapeu = 1.0f + (0.2f) * sin(proporcao * PI); 
     }
     
+    // Gera uma sombra embaixo da bola no momento do salto
     if (executandoChapeu) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -847,6 +844,7 @@ void liberarInputs(int value) {
     inputsBloqueados = false;
 }
 
+// Contra-ataque rapido do goleiro
 void chuteGoleiroEsquerda(int value) {
     inputsBloqueados = false;
     defendendoGolContra = false;
@@ -863,6 +861,7 @@ void chuteGoleiroDireita(int value) {
     tocarSomArquivo(ARQ_SOM_DISPARADA, VOL_DISPARADA);
 }
 
+// Reposiciona jogadores apos gol ou falta
 void resetJogadores(bool isGoal) {
     for (int i = 0; i < 22; i++) {
         jogadores[i].x = jogadores[i].homeX;
@@ -886,6 +885,7 @@ void resetJogadores(bool isGoal) {
     }
 }
 
+// Centraliza a manipulacao do estado da partida em saidas de bola e pausas
 void resolverSaidaDeBola(int evento) {
     bool isGoal = false;
     switch (evento) {
@@ -936,7 +936,7 @@ void resolverSaidaDeBola(int evento) {
         case EVENTO_INTERVALO:
             bolaX = 0.0f; bolaY = 0.0f;
             gramaInvertida = !gramaInvertida;
-            placarEsq = placarDir;
+            segundoTempo = true;
             progressoChapeu = 0.0f;
             posseDireita = !TIME_INICIAL_DIREITA;
             isGoal = true;
@@ -979,6 +979,7 @@ void resolverSaidaDeBola(int evento) {
     }
 }
 
+// Inicia timer para repor bola em jogo apos interrupcoes
 void iniciarSequenciaSaida(TipoEvento evento) {
     bolaEmJogo = false;
     inputsBloqueados = true;
@@ -995,6 +996,7 @@ void iniciarSequenciaSaida(TipoEvento evento) {
     glutTimerFunc(delay, resolverSaidaDeBola, evento);
 }
 
+// Loop principal executado a cada frame
 void atualizaFisica(int value) {
     float acel = BOLA_ACEL * MULTIPLICADOR_GERAL;
     float maxVel = BOLA_MAX_VEL * MULTIPLICADOR_GERAL;
@@ -1005,21 +1007,23 @@ void atualizaFisica(int value) {
         if (teclaA || teclaJ || teclaEsq)   { bolaVX -= acel; if (bolaVX > 0) bolaVX *= 0.8f; }
         if (teclaD || teclaL || teclaDir)   { bolaVX += acel; if (bolaVX < 0) bolaVX *= 0.8f; }
 
+        // Ativa cronometro visual quando jogador movimenta a bola pela primeira vez
         if (teclaW || teclaI || teclaCima || teclaS || teclaK || teclaBaixo || 
             teclaA || teclaJ || teclaEsq || teclaD || teclaL || teclaDir) {
             cronometroRodando = true;
         }
     }
 
+    // Aplica atrito na bola
     bolaVX *= BOLA_ATRITO;
     bolaVY *= BOLA_ATRITO;
 
     float velAtual = sqrt(bolaVX * bolaVX + bolaVY * bolaVY);
     
+    // Identifica mudancas bruscas de velocidade para reproduzir "chute/disparada"
     if (velAnterior < 0.5f && velAtual > 2.0f && !executandoChapeu) {
         tocarSomArquivo(ARQ_SOM_DISPARADA, VOL_DISPARADA);
     }
-    atualizarSomBola(velAtual);
     velAnterior = velAtual;
 
     if (velAtual > maxVel) {
@@ -1041,6 +1045,8 @@ void atualizaFisica(int value) {
 
     int closestDefId = -1;
     float minDist = 999999.0f;
+    
+    // Identifica defensor adversario mais proximo da bola
     for (int k = 0; k < 22; k++) {
         if (jogadores[k].role != 0 && jogadores[k].time != (posseDireita ? 1 : 0)) {
             float d = sqrt(pow(jogadores[k].x - bolaX, 2) + pow(jogadores[k].y - bolaY, 2));
@@ -1051,6 +1057,7 @@ void atualizaFisica(int value) {
         }
     }
 
+    // Comportamento da IA dos jogadores em campo
     for (int i = 0; i < 22; i++) {
         if (!bolaEmJogo || !jogoIniciado) continue;
         
@@ -1060,6 +1067,7 @@ void atualizaFisica(int value) {
         if (defendendoGolContra && ((!posseDireita && i == 0) || (posseDireita && i == 11))) continue;
         
         if (jogadores[i].role == 0) {
+            // Goleiro segue a bola apenas no eixo Y
             float targetY = bolaY;
             if (targetY > GOL_L / 2.0f) targetY = GOL_L / 2.0f;
             if (targetY < -GOL_L / 2.0f) targetY = -GOL_L / 2.0f;
@@ -1073,6 +1081,7 @@ void atualizaFisica(int value) {
             }
             jogadores[i].angle = (jogadores[i].time == 0) ? 0.0f : 180.0f;
         } else {
+            // Comportamento dos zagueiros, meio-campos e atacantes
             float tx = jogadores[i].homeX;
             float ty = jogadores[i].homeY;
 
@@ -1082,9 +1091,11 @@ void atualizaFisica(int value) {
                     tx = jogadores[i].homeX;
                     ty = jogadores[i].homeY;
                 } else if (i == closestDefId && tempoEsperaIA <= 0.0f) {
+                    // O defensor mais proximo persegue a bola
                     tx = bolaX;
                     ty = bolaY;
                 } else {
+                    // O resto forma uma barreira na frente da propria area
                     float goalX = (jogadores[i].time == 0) ? -MEIO_C : MEIO_C;
                     tx = jogadores[i].homeX * 0.5f + bolaX * 0.4f + goalX * 0.1f;
                     ty = jogadores[i].homeY * 0.6f + bolaY * 0.4f;
@@ -1111,6 +1122,7 @@ void atualizaFisica(int value) {
         }
     }
 
+    // Colisao entre jogadores
     for (int i = 0; i < 22; i++) {
         for (int j = i + 1; j < 22; j++) {
             float dx = jogadores[i].x - jogadores[j].x;
@@ -1128,6 +1140,7 @@ void atualizaFisica(int value) {
         }
     }
 
+    // Avanca o cronometro virtual
     if (cronometroRodando) {
         tempoJogoVirtualSegundos += (16.0f / 1000.0f) * (90.0f / tempoPartidaMinutos);
         
@@ -1141,6 +1154,8 @@ void atualizaFisica(int value) {
     }
 
     bool pertoInimigo = false;
+    
+    // Tratamento de recuo e posse de bola entre bola e jogadores
     if (!executandoChapeu) {
         for(int i = 0; i < 22; i++) {
             float dx = bolaX - jogadores[i].x;
@@ -1170,6 +1185,7 @@ void atualizaFisica(int value) {
                     bolaVY *= 0.6f;
                 }
 
+                // Efetiva a inversao da posse de bola quando ha contato direto com o adversario
                 if (isEnemy && !inputsBloqueados && bolaEmJogo && !defendendoGolContra) {
                     posseDireita = !posseDireita;
                     tempoEsperaIA = 500.0f;
@@ -1194,17 +1210,15 @@ void atualizaFisica(int value) {
     
     bool gkPodeDefender = true;
     if (executandoChapeu) {
-        float alturaAtual = sin((tempoAtualChapeu / DURACAO_CHAPEU_SEC) * PI);
-        if (alturaAtual > ALTURA_DEFESA_GK) {
-            gkPodeDefender = false;
-        }
+        gkPodeDefender = false;
     }
 
+    // Lida com colisoes nas traves e defesas de bloqueio do goleiro
     if (gkPodeDefender) {
         float distGkEsq = sqrt(pow(bolaX - jogadores[0].x, 2) + pow(bolaY - jogadores[0].y, 2));
         float distGkDir = sqrt(pow(bolaX - jogadores[11].x, 2) + pow(bolaY - jogadores[11].y, 2));
 
-        if (distGkEsq < RAIO_DEFESA_GK && bolaEmJogo && !defendendoGolContra && !posseDireita) {
+        if (distGkEsq < RAIO_DEFESA_GK && bolaEmJogo && !defendendoGolContra && posseDireita) {
             if (executandoChapeu) { executandoChapeu = false; progressoChapeu = 0.0f; }
             defendendoGolContra = true;
             inputsBloqueados = true;
@@ -1213,7 +1227,7 @@ void atualizaFisica(int value) {
             posseDireita = false;
             tocarSomArquivo(ARQ_SOM_DEFESA, VOL_DEFESA);
             glutTimerFunc(1500, chuteGoleiroEsquerda, 0);
-        } else if (distGkDir < RAIO_DEFESA_GK && bolaEmJogo && !defendendoGolContra && posseDireita) {
+        } else if (distGkDir < RAIO_DEFESA_GK && bolaEmJogo && !defendendoGolContra && !posseDireita) {
             if (executandoChapeu) { executandoChapeu = false; progressoChapeu = 0.0f; }
             defendendoGolContra = true;
             inputsBloqueados = true;
@@ -1242,6 +1256,7 @@ void atualizaFisica(int value) {
         }
     }
 
+    // Tratamento de fisica nas laterais e fundo da rede de gol
     if (!executandoChapeu) {
         if (bolaX < -MEIO_C) {
             if (bolaY < (GOL_L / 2.0f) && bolaY > -(GOL_L / 2.0f)) {
@@ -1273,6 +1288,7 @@ void atualizaFisica(int value) {
         }
     }
 
+    // Valida saidas de bola pela lateral, marcadores de gol e escanteios
     if (bolaEmJogo && !defendendoGolContra) {
         if (bolaY - BOLA_RAIO > MEIO_L) {
             tocarSomArquivo(ARQ_SOM_APITO, VOL_APITO);
@@ -1332,6 +1348,7 @@ void geral() {
     glutSwapBuffers(); 
 }
 
+// Analisa colisoes do cursor sobre a interface
 void mouseClick(int button, int state, int x, int y) {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
         float mx = ((float)x / glutGet(GLUT_WINDOW_WIDTH)) * (2.0f * TELA_LIMITE_X) - TELA_LIMITE_X;
@@ -1387,6 +1404,7 @@ void tecladoAperta(unsigned char key, int x, int y) {
         case 'j': case 'J': teclaJ = true; break;
         case 'l': case 'L': teclaL = true; break;
         case ' ':
+            // Valida pulo caso a barra esteja cheia
             if (progressoChapeu >= 1.0f && !executandoChapeu && bolaEmJogo && !inputsBloqueados) {
                 executandoChapeu = true;
                 progressoChapeu = 0.0f;
